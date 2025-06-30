@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ベースフォント設定 */
+body {
+  @apply bg-gray-50 text-gray-900 font-sans antialiased;
+}
+
+/* 見出しサイズのカスタム（必要に応じて） */
+h1 {
+  @apply text-3xl font-bold;
+}
+h2 {
+  @apply text-2xl font-semibold;
+}
+
+/* ボタン初期スタイル（Tailwindで上書きする場合不要） */
+button {
+  @apply rounded-md px-4 py-2 text-sm font-medium transition hover:opacity-80;
+}
