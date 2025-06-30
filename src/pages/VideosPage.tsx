@@ -306,10 +306,12 @@ const VideosPage: React.FC = () => {
                 <label className="block text-sm font-medium mb-1">サムネイル画像URL</label>
                 <input type="text" name="thumbnail" value={form.thumbnail} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">動画URL</label>
-                <input type="text" name="videoUrl" value={form.videoUrl} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
-              </div>
+              {form.uploadType === 'link' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">動画URL</label>
+                  <input type="text" name="videoUrl" value={form.videoUrl} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium mb-1">再生時間</label>
                 <input type="text" name="duration" value={form.duration} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 12:35" />
