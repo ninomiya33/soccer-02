@@ -3,6 +3,7 @@ import BottomTabBar from '../components/BottomTabBar.js';
 import { useAuth } from '../contexts/AuthContext.js';
 import { scheduleService, Schedule } from '../services/scheduleService.js';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import PracticeLogForm from '../components/PracticeLogForm.js';
 
 const typeOptions = [
   { value: '試合', label: '試合', color: 'bg-red-100 text-red-600', dot: 'bg-red-500', icon: 'fas fa-futbol', iconBg: 'bg-red-500' },

@@ -7,6 +7,7 @@ export interface Profile {
   avatar_url?: string;
   age?: number;
   grade?: string;
+  gender?: string;
   created_at?: string;
 }
 

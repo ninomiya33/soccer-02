@@ -6,7 +6,15 @@ export interface PhysicalLog {
   date: string
   height: number
   weight: number
-  run: string
+  vision_left?: string
+  vision_right?: string
+  run50m?: string
+  dash10m?: string
+  shuttle_run?: string
+  jump?: string
+  sit_up?: string
+  sit_and_reach?: string
+  note?: string
   user_id?: string
   created_at?: string
 }
@@ -15,7 +23,7 @@ export const physicalLogService = {
   async getLogs(playerId: number): Promise<PhysicalLog[]> {
     const { data, error } = await supabase
       .from('physical_logs')
-      .select('*')
+      .select('id, player_id, date, height, weight, vision_left, vision_right, run50m, dash10m, shuttle_run, jump, sit_up, sit_and_reach, note, user_id, created_at')
       .eq('player_id', playerId)
       .order('date', { ascending: false })
     if (error) throw new Error(error.message)

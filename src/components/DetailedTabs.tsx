@@ -17,15 +17,16 @@ type TabProps = {
     date: string;
     height: string;
     weight: string;
-    run: string;
+    run50m?: string;
   }[];
   skillLogs: {
     date: string;
-    shoot: string;
-    pass: string;
-    dribble: string;
-    defense: string;
-    tactic: string;
+    dribble_count: string;
+    shoot_success: string;
+    pass_success: string;
+    defense_success: string;
+    decision_correct: string;
+    total_score: string;
     comment: string;
   }[];
   matchLogs: {
@@ -56,6 +57,11 @@ const DetailedTabs: React.FC<TabProps> = ({
   skillLogs,
   matchLogs
 }) => {
+  console.log('DetailedTabs rendered');
+
+  // デバッグ用: 最上部でpracticeLogsとcalendarCellsを出力
+  console.log('practiceLogs at top:', practiceLogs);
+
   // 体力測定グラフの期間
   const [physicalPeriod, setPhysicalPeriod] = useState<'week' | 'month' | '3month' | 'year'>('month');
 
@@ -130,7 +136,7 @@ const DetailedTabs: React.FC<TabProps> = ({
           {
             name: '走力',
             type: 'line',
-            data: filteredPhysicalLogs.map(log => Number(log.run)),
+            data: filteredPhysicalLogs.map(log => Number(log.run50m)),
             symbol: 'circle',
             symbolSize: 10,
             smooth: true,
@@ -164,9 +170,9 @@ const DetailedTabs: React.FC<TabProps> = ({
         tooltip: {},
         radar: {
           indicator: [
-            { name: 'シュート力', max: 100 },
+            { name: '1分間ドリブル回数', max: 100 },
+            { name: '10本シュート成功数', max: 100 },
             { name: 'パス精度', max: 100 },
-            { name: 'ドリブル', max: 100 },
             { name: '守備力', max: 100 },
             { name: '戦術理解', max: 100 }
           ],
@@ -180,11 +186,11 @@ const DetailedTabs: React.FC<TabProps> = ({
               {
                 value: latestSkill
                   ? [
-                      Number(latestSkill.shoot),
-                      Number(latestSkill.pass),
-                      Number(latestSkill.dribble),
-                      Number(latestSkill.defense),
-                      Number(latestSkill.tactic)
+                      Number(latestSkill.dribble_count),
+                      Number(latestSkill.shoot_success),
+                      Number(latestSkill.pass_success),
+                      Number(latestSkill.defense_success),
+                      Number(latestSkill.decision_correct)
                     ]
                   : [0, 0, 0, 0, 0],
                 name: '今回',
@@ -207,14 +213,42 @@ const DetailedTabs: React.FC<TabProps> = ({
     }
   }, [skillChartRef, activeTab, skillLogs]);
 
-  // 練習した日（practiceLogsから抽出）
+  // --- カレンダー・リスト完全リセット（YYYY-MM-DD一致方式） ---
+
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0始まり
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+  // YYYY-MM-DD形式で今月の日付配列を生成
+  const dateStrings = Array.from({ length: daysInMonth }, (_, i) => {
+    const day = i + 1;
+    return `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  });
+
+  const weekDays = ['日','月','火','水','木','金','土'];
+  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
+  // カレンダーセル配列（空白セルはnull、日付セルはYYYY-MM-DD）
+  const calendarCells = [
+    ...Array.from({ length: firstDayOfWeek }, () => null), // 空白セルはnull
+    ...dateStrings
+  ];
+
+  // デバッグ用: 最上部でpracticeLogsとcalendarCellsを出力
+  console.log('practiceLogs at top:', practiceLogs);
+  console.log('calendarCells at top:', calendarCells);
+
+  // 今月の練習記録の日付（YYYY-MM-DD）
   const practicedDays = practiceLogs
-    .map(log => {
-      const d = new Date(log.date);
-      // 6月のみ色付け（今月のみ）
-      return d.getMonth() === 5 ? d.getDate() : null;
-    })
-    .filter((d): d is number => !!d);
+    .filter(log => log.date.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`))
+    .map(log => (log.date.length > 10 ? log.date.slice(0, 10) : log.date));
+
+  // 選択した日付の記録
+  const selectedLogs = selectedDate
+    ? practiceLogs.filter(log => log.date === selectedDate)
+    : practiceLogs.filter(log => log.date.startsWith(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`));
 
   // 試合データ分析グラフ用データ
   const matchChartData = React.useMemo(() => {
@@ -254,6 +288,20 @@ const DetailedTabs: React.FC<TabProps> = ({
       };
     }
   }, [matchChartRef, activeTab, matchChartData]);
+
+  // デバッグ用: 練習記録タブ描画直前でまとめて出力
+  if (activeTab === '練習記録') {
+    console.log('【DEBUG】practiceLogs:', practiceLogs);
+    console.log('【DEBUG】calendarCells:', calendarCells);
+    console.log('【DEBUG】practicedDays:', practicedDays);
+    console.log('【DEBUG】selectedDate:', selectedDate);
+    console.log('【DEBUG】selectedLogs:', selectedLogs);
+    calendarCells.forEach((cell, i) => {
+      if (typeof cell === 'string') {
+        console.log('【DEBUG】cell:', cell, 'practicedDays:', practicedDays, 'includes(cell):', practicedDays.includes(cell));
+      }
+    });
+  }
 
   return (
     <div className="w-full">
@@ -295,7 +343,7 @@ const DetailedTabs: React.FC<TabProps> = ({
                 <span className="font-bold mr-2">{log.date}</span>
                 <span>身長: <span className="font-bold">{log.height}cm</span></span>
                 <span>体重: <span className="font-bold">{log.weight}kg</span></span>
-                <span>50m走: <span className="font-bold">{log.run}秒</span></span>
+                <span>50m走: <span className="font-bold">{log.run50m}秒</span></span>
               </div>
             ))}
           </div>
@@ -315,11 +363,11 @@ const DetailedTabs: React.FC<TabProps> = ({
             {skillLogs.slice().map((log, i) => (
               <div key={i} className="p-3 rounded border bg-gray-50 flex flex-col md:flex-row md:items-center md:gap-6 text-sm">
                 <span className="font-bold mr-2">{log.date}</span>
-                <span>シュート力: <span className="font-bold">{log.shoot}</span></span>
-                <span>パス精度: <span className="font-bold">{log.pass}</span></span>
-                <span>ドリブル: <span className="font-bold">{log.dribble}</span></span>
-                <span>守備力: <span className="font-bold">{log.defense}</span></span>
-                <span>戦術理解: <span className="font-bold">{log.tactic}</span></span>
+                <span>1分間ドリブル回数: <span className="font-bold">{log.dribble_count}</span></span>
+                <span>10本シュート成功数: <span className="font-bold">{log.shoot_success}</span></span>
+                <span>パス精度: <span className="font-bold">{log.pass_success}</span></span>
+                <span>守備力: <span className="font-bold">{log.defense_success}</span></span>
+                <span>戦術理解: <span className="font-bold">{log.decision_correct}</span></span>
                 {log.comment && <span className="text-gray-500 ml-2">コメント: {log.comment}</span>}
               </div>
             ))}
@@ -333,51 +381,46 @@ const DetailedTabs: React.FC<TabProps> = ({
           {/* カレンダー表示 */}
           <div className="mb-4">
             <div className="grid grid-cols-7 gap-1 mb-2">
-              {['月', '火', '水', '木', '金', '土', '日'].map((day, i) => (
+              {weekDays.map((day, i) => (
                 <div key={i} className="text-center text-xs font-medium">{day}</div>
               ))}
-              {Array.from({ length: 30 }).map((_, i) => {
-                const practiced = practicedDays.includes(i + 1);
-                return (
-                  <div
+              {calendarCells.map((cell, i) => {
+                const isPracticed = typeof cell === 'string' && practicedDays.includes(cell);
+                return typeof cell === 'string' ? (
+                  <button
                     key={i}
-                    className={`aspect-square rounded-full flex items-center justify-center text-xs ${practiced ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
+                    type="button"
+                    onClick={() => setSelectedDate(selectedDate === cell ? null : cell)}
+                    className={`aspect-square rounded-full flex items-center justify-center text-xs font-bold border transition relative
+                      ${selectedDate === cell
+                        ? 'bg-blue-500 text-white border-blue-500'
+                        : isPracticed
+                          ? 'bg-blue-500 text-white border-blue-500 font-extrabold'
+                          : 'bg-gray-100 border-gray-200'}`}
                   >
-                    {i + 1}
-                  </div>
+                    {Number(cell.split('-')[2])}
+                  </button>
+                ) : (
+                  <div key={i} />
                 );
               })}
             </div>
           </div>
           {/* 練習記録リスト */}
-          {practiceLogs.slice(0, 4).map((log, index) => (
-            <div key={index} className="mb-4 p-4 bg-white rounded-xl shadow border">
-              <h4 className="text-base font-bold">{log.title}</h4>
-              <p className="text-sm text-gray-500">
-                {log.date}・{log.duration}
-              </p>
-              <p className="text-sm mt-1">{log.description}</p>
-              <span className="inline-block mt-2 text-sm bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded-lg">
-                {log.duration}
-              </span>
-            </div>
-          ))}
-          {practiceLogs.length > 4 && (
-            <div className="max-h-64 overflow-y-auto">
-              {practiceLogs.slice(4).map((log, index) => (
-                <div key={index + 4} className="mb-4 p-4 bg-white rounded-xl shadow border">
-                  <h4 className="text-base font-bold">{log.title}</h4>
-                  <p className="text-sm text-gray-500">
-                    {log.date}・{log.duration}
-                  </p>
-                  <p className="text-sm mt-1">{log.description}</p>
-                  <span className="inline-block mt-2 text-sm bg-blue-100 text-blue-600 font-bold px-3 py-1 rounded-lg">
-                    {log.duration}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mt-4">
+            {selectedDate && selectedLogs.length === 0 && (
+              <div className="text-gray-400 text-sm">この日の練習記録はありません</div>
+            )}
+            {selectedLogs.length === 0 && !selectedDate && (
+              <div className="text-gray-400 text-sm">今月の練習記録はありません</div>
+            )}
+            {selectedLogs.map((log, index) => (
+              <div key={index} className="mb-2 p-2 bg-gray-100 rounded">
+                <div>{log.title}</div>
+                <div className="text-xs text-gray-500">{log.date}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

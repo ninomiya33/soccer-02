@@ -78,9 +78,9 @@ const PlayerDetailPage: React.FC = () => {
       tooltip: {},
       radar: {
         indicator: [
-          { name: 'シュート力', max: 100 },
+          { name: '1分間ドリブル回数', max: 100 },
+          { name: '10本シュート成功数', max: 100 },
           { name: 'パス精度', max: 100 },
-          { name: 'ドリブル', max: 100 },
           { name: '守備力', max: 100 },
           { name: '戦術理解', max: 100 }
         ],
@@ -93,7 +93,7 @@ const PlayerDetailPage: React.FC = () => {
           data: [
             {
               value: latest
-                ? [latest.shoot, latest.pass, latest.dribble, latest.defense, latest.tactic].map(Number)
+                ? [latest.dribble_count, latest.shoot_success, latest.pass_success, latest.defense_success, latest.decision_correct].map(Number)
                 : [0, 0, 0, 0, 0],
               name: '今回',
               areaStyle: { opacity: 0.2 },
@@ -199,11 +199,11 @@ const PlayerDetailPage: React.FC = () => {
               {skillLogs.map((log, i) => (
                 <div key={i} className="p-3 rounded border bg-gray-50 flex flex-col md:flex-row md:items-center md:gap-6 text-sm">
                   <span className="font-bold mr-2">{log.date}</span>
-                  <span>シュート: <span className="font-bold">{log.shoot}</span></span>
-                  <span>パス: <span className="font-bold">{log.pass}</span></span>
-                  <span>ドリブル: <span className="font-bold">{log.dribble}</span></span>
-                  <span>守備: <span className="font-bold">{log.defense}</span></span>
-                  <span>戦術: <span className="font-bold">{log.tactic}</span></span>
+                  <span>1分間ドリブル回数: <span className="font-bold">{log.dribble_count}</span></span>
+                  <span>10本シュート成功数: <span className="font-bold">{log.shoot_success}</span></span>
+                  <span>パス精度: <span className="font-bold">{log.pass_success}</span></span>
+                  <span>守備力: <span className="font-bold">{log.defense_success}</span></span>
+                  <span>戦術理解: <span className="font-bold">{log.decision_correct}</span></span>
                   {log.comment && <span className="text-gray-500 ml-2">{log.comment}</span>}
                 </div>
               ))}

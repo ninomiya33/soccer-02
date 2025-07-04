@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BottomTabBar from '../components/BottomTabBar.js';
 import { useAuth } from '../contexts/AuthContext.js';
 import { profileService } from '../services/profileService.js';
+import { Profile } from '../services/profileService.js';
 
 const SettingsPage: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -14,15 +15,17 @@ const SettingsPage: React.FC = () => {
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   // プロフィール情報
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<Profile>({
+    id: '',
     name: '',
     email: '',
-    image: '',
-    age: '',
+    avatar_url: '',
+    age: undefined,
     grade: '',
+    gender: '',
   });
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState(profile);
+  const [editForm, setEditForm] = useState<Profile>(profile);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
 
   // プロフィール初期値をSupabaseから取得
@@ -32,20 +35,24 @@ const SettingsPage: React.FC = () => {
       const data = await profileService.getProfile(user.id);
       if (data) {
         setProfile({
+          id: data.id,
           name: data.name || '',
           email: data.email || '',
-          image: data.avatar_url || '',
-          age: data.age ? String(data.age) : '',
+          avatar_url: data.avatar_url || '',
+          age: data.age,
           grade: data.grade || '',
+          gender: data.gender || '',
         });
       } else {
         // プロフィールが未登録の場合はauth情報を初期値に
         setProfile({
+          id: '',
           name: '',
           email: user.email || '',
-          image: '',
-          age: '',
+          avatar_url: '',
+          age: undefined,
           grade: '',
+          gender: '',
         });
       }
     };
@@ -67,30 +74,35 @@ const SettingsPage: React.FC = () => {
     });
   };
 
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.name === 'imageFile' && e.target.files && e.target.files[0]) {
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (e.target instanceof HTMLInputElement && e.target.name === 'imageFile' && e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = ev => {
         setEditImagePreview(ev.target?.result as string);
-        setEditForm({ ...editForm, image: ev.target?.result as string });
+        setEditForm({ ...editForm, avatar_url: ev.target?.result as string });
       };
       reader.readAsDataURL(file);
     } else {
-      setEditForm({ ...editForm, [e.target.name]: e.target.value });
-      if (e.target.name === 'image') setEditImagePreview(e.target.value);
+      if (e.target.name === 'age') {
+        setEditForm({ ...editForm, age: e.target.value ? Number(e.target.value) : undefined });
+      } else {
+        setEditForm({ ...editForm, [e.target.name]: e.target.value });
+        if (e.target.name === 'avatar_url') setEditImagePreview(e.target.value);
+      }
     }
   };
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    const profileData = {
+    const profileData: Profile = {
       id: user.id,
       name: editForm.name,
       email: editForm.email,
-      avatar_url: editForm.image,
-      age: editForm.age ? Number(editForm.age) : undefined,
+      avatar_url: editForm.avatar_url,
+      age: editForm.age,
       grade: editForm.grade,
+      gender: editForm.gender,
     };
     await profileService.upsertProfile(profileData);
     setProfile(editForm);
@@ -123,7 +135,7 @@ const SettingsPage: React.FC = () => {
     <div className="bg-gray-50 min-h-screen pb-16">
       {/* プロフィールカード */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-400 rounded-2xl shadow p-6 flex flex-col items-center max-w-xl mx-auto mt-4">
-        <img src={profile.image} alt="profile" className="w-20 h-20 rounded-full border-4 border-white shadow mb-2" />
+        <img src={profile.avatar_url} alt="profile" className="w-20 h-20 rounded-full border-4 border-white shadow mb-2" />
         <div className="text-white text-xl font-bold">{profile.name}</div>
         <div className="text-blue-100 text-sm mb-2">{profile.email}</div>
         <button className="mt-2 px-6 py-2 rounded-lg border border-blue-200 text-blue-900 bg-white font-bold flex items-center gap-2 hover:bg-blue-50" onClick={() => { setEditForm(profile); setEditModalOpen(true); }}>
@@ -151,7 +163,7 @@ const SettingsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">画像URL</label>
-                <input type="text" name="image" value={editForm.image} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full mb-2" />
+                <input type="text" name="avatar_url" value={editForm.avatar_url} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full mb-2" />
                 <input type="file" name="imageFile" accept="image/*" onChange={handleEditFormChange} className="mb-2" />
                 {editImagePreview && (
                   <img src={editImagePreview} alt="preview" className="w-20 h-20 rounded-full mx-auto border mb-2" />
@@ -159,11 +171,19 @@ const SettingsPage: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">年齢</label>
-                <input type="number" name="age" value={editForm.age} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" min="0" />
+                <input type="number" name="age" value={editForm.age ?? ''} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" min="0" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">学年</label>
                 <input type="text" name="grade" value={editForm.grade} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">性別</label>
+                <select name="gender" value={editForm.gender} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full">
+                  <option value="">選択してください</option>
+                  <option value="男子">男子</option>
+                  <option value="女子">女子</option>
+                </select>
               </div>
               <div className="flex justify-end">
                 <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">保存</button>

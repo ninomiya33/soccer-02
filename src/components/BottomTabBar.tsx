@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 const tabs = [
   { to: '/', icon: 'fas fa-home', label: 'ホーム' },
   { to: '/players', icon: 'fas fa-users', label: '選手' },
-  { to: '/analytics', icon: 'fas fa-chart-line', label: '分析' },
+  { to: '/analytics', icon: 'fas fa-chart-line', label: 'AIコーチ' },
   { to: '/schedule', icon: 'fas fa-calendar-alt', label: '予定' },
   { to: '/videos', icon: 'fas fa-video', label: '動画' },
   { to: '/settings', icon: 'fas fa-cog', label: '設定' },

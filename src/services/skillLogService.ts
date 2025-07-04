@@ -4,9 +4,9 @@ export interface SkillLog {
   id?: number
   player_id: number
   date: string
+  dribble: number
   shoot: number
   pass: number
-  dribble: number
   defense: number
   tactic: number
   comment?: string
@@ -18,7 +18,7 @@ export const skillLogService = {
   async getLogs(playerId: number): Promise<SkillLog[]> {
     const { data, error } = await supabase
       .from('skill_logs')
-      .select('*')
+      .select('id, player_id, date, dribble, shoot, pass, defense, tactic, comment, user_id, created_at')
       .eq('player_id', playerId)
       .order('date', { ascending: false })
     if (error) throw new Error(error.message)

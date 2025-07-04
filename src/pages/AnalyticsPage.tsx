@@ -8,21 +8,25 @@ import { physicalLogService } from '../services/physicalLogService.js';
 import { practiceLogService } from '../services/practiceLogService.js';
 import { matchLogService } from '../services/matchLogService.js';
 import { playerService } from '../services/playerService.js';
+import { fetchAdvice } from '../services/aiAdviceService.js';
+import { saveAdviceLog, getAdviceLogs, deleteAdviceLog } from '../services/adviceLogService.js';
+import { fetchGrowthPrediction } from '../services/growthService.js';
 
 interface AnalyticsPageProps {
   physicalLogs: {
     date: string;
     height: string;
     weight: string;
-    run: string;
+    run50m?: string;
   }[];
   skillLogs: {
     date: string;
-    shoot: string;
-    pass: string;
-    dribble: string;
-    defense: string;
-    tactic: string;
+    dribble_count: string;
+    shoot_success: string;
+    pass_success: string;
+    defense_success: string;
+    decision_correct: string;
+    total_score: string;
     comment: string;
   }[];
   matchLogs: {
@@ -43,11 +47,12 @@ interface AnalyticsPageProps {
 
 interface SkillLogType {
   date: string;
-  shoot: string;
-  pass: string;
-  dribble: string;
-  defense: string;
-  tactic: string;
+  dribble_count: string;
+  shoot_success: string;
+  pass_success: string;
+  defense_success: string;
+  decision_correct: string;
+  total_score: string;
   comment: string;
 }
 
@@ -55,7 +60,7 @@ interface PhysicalLogType {
   date: string;
   height: string;
   weight: string;
-  run: string;
+  run50m?: string;
 }
 
 interface PracticeLogType {
@@ -77,7 +82,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   // 総合評価: スキル・体力の最新値合計（例）
   const latestSkill = skillLogs[0];
   const latestPhysical = physicalLogs[0];
-  const skillScore = latestSkill ? [latestSkill.shoot, latestSkill.pass, latestSkill.dribble, latestSkill.defense, latestSkill.tactic].reduce((a, b) => a + Number(b), 0) : 0;
+  const skillScore = latestSkill ? [latestSkill.dribble_count, latestSkill.shoot_success, latestSkill.pass_success, latestSkill.defense_success, latestSkill.decision_correct].reduce((a, b) => a + Number(b), 0) : 0;
   const physicalScore = latestPhysical ? Number(latestPhysical.height) + Number(latestPhysical.weight) : 0;
   const totalScore = skillScore + physicalScore;
 
@@ -91,8 +96,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   })();
   const thisMonthSkill = skillLogs.find(l => getMonth(l.date) === nowMonth);
   const lastMonthSkill = skillLogs.find(l => getMonth(l.date) === lastMonth);
-  const thisMonthScore = thisMonthSkill ? [thisMonthSkill.shoot, thisMonthSkill.pass, thisMonthSkill.dribble, thisMonthSkill.defense, thisMonthSkill.tactic].reduce((a, b) => a + Number(b), 0) : 0;
-  const lastMonthScore = lastMonthSkill ? [lastMonthSkill.shoot, lastMonthSkill.pass, lastMonthSkill.dribble, lastMonthSkill.defense, lastMonthSkill.tactic].reduce((a, b) => a + Number(b), 0) : 0;
+  const thisMonthScore = thisMonthSkill ? [thisMonthSkill.dribble_count, thisMonthSkill.shoot_success, thisMonthSkill.pass_success, thisMonthSkill.defense_success, thisMonthSkill.decision_correct].reduce((a, b) => a + Number(b), 0) : 0;
+  const lastMonthScore = lastMonthSkill ? [lastMonthSkill.dribble_count, lastMonthSkill.shoot_success, lastMonthSkill.pass_success, lastMonthSkill.defense_success, lastMonthSkill.decision_correct].reduce((a, b) => a + Number(b), 0) : 0;
   const growthRate = lastMonthScore ? ((thisMonthScore - lastMonthScore) / lastMonthScore) * 100 : 0;
 
   // 今月の練習時間合計
@@ -106,7 +111,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   const thisMonthMatches = matchLogs.filter(l => getMonth(l.date) === nowMonth);
 
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<string>("成長推移");
+  const [activeTab, setActiveTab] = useState<string>("AIコーチ");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("月間");
   const [selectedDataType, setSelectedDataType] = useState<string>("全て");
   const [showReportDialog, setShowReportDialog] = useState<boolean>(false);
@@ -116,9 +121,33 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   const playerComparisonChartRef = useRef<HTMLDivElement>(null);
   const strengthWeaknessChartRef = useRef<HTMLDivElement>(null);
 
+  const [form, setForm] = useState({
+    date: '',
+    age: '',
+    gender: '',
+    run50m: '',
+    shuttle_run: '',
+    jump: '',
+    sit_up: '',
+    sit_and_reach: '',
+  });
+  const [adviceResult, setAdviceResult] = useState<{ scores: any; advice: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [growthPrediction, setGrowthPrediction] = useState<any>(null);
+  const [growthLoading, setGrowthLoading] = useState(false);
+  const [growthError, setGrowthError] = useState<string | null>(null);
+
   useEffect(() => {
     if (profile?.name) setSelectedPlayer(profile.name);
   }, [profile]);
+
+  useEffect(() => {
+    if (user?.id) {
+      getAdviceLogs(user.id).then(setLogs).catch(console.error);
+    }
+  }, [user]);
 
   // 技術・体力スコアを月ごとに集計（練習記録も加味）
   const simpleGrowthMonthly: { [month: string]: { skill: number; physical: number; count: number } } = {};
@@ -126,8 +155,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
     const m = getMonth(l.date);
     if (!simpleGrowthMonthly[m]) simpleGrowthMonthly[m] = { skill: 0, physical: 0, count: 0 };
     // skill_logs
-    if ('shoot' in l && 'pass' in l && 'dribble' in l && 'defense' in l && 'tactic' in l) {
-      simpleGrowthMonthly[m].skill += Number(l.shoot) + Number(l.pass) + Number(l.dribble) + Number(l.defense) + Number(l.tactic);
+    if ('dribble_count' in l && 'shoot_success' in l && 'pass_success' in l && 'defense_success' in l && 'decision_correct' in l) {
+      simpleGrowthMonthly[m].skill += Number(l.dribble_count) + Number(l.shoot_success) + Number(l.pass_success) + Number(l.defense_success) + Number(l.decision_correct);
       simpleGrowthMonthly[m].count++;
     }
     // physical_logs
@@ -151,7 +180,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
 
   // 成長率バー用: 今月・先月のデータで成長率を計算
   // 技術スコア成長率
-  const sumSkill = (logs: SkillLogType[]): number => logs.reduce((sum, l) => sum + Number(l.shoot) + Number(l.pass) + Number(l.dribble) + Number(l.defense) + Number(l.tactic), 0);
+  const sumSkill = (logs: SkillLogType[]): number => logs.reduce((sum, l) => sum + Number(l.dribble_count) + Number(l.shoot_success) + Number(l.pass_success) + Number(l.defense_success) + Number(l.decision_correct), 0);
   const thisMonthSkillLogs = skillLogs.filter(l => getMonth(l.date) === nowMonth);
   const lastMonthSkillLogs = skillLogs.filter(l => getMonth(l.date) === lastMonth);
   const thisMonthSkillScore = sumSkill(thisMonthSkillLogs);
@@ -167,7 +196,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   const physicalGrowthRate = lastMonthPhysicalAvg ? ((thisMonthPhysicalAvg - lastMonthPhysicalAvg) / lastMonthPhysicalAvg) * 100 : 0;
 
   // メンタルスコア成長率（defense + tactic）
-  const sumMental = (logs: SkillLogType[]): number => logs.reduce((sum, l) => sum + Number(l.defense) + Number(l.tactic), 0);
+  const sumMental = (logs: SkillLogType[]): number => logs.reduce((sum, l) => sum + Number(l.defense_success) + Number(l.decision_correct), 0);
   const thisMonthMental = sumMental(thisMonthSkillLogs);
   const lastMonthMental = sumMental(lastMonthSkillLogs);
   const mentalGrowthRate = lastMonthMental ? ((thisMonthMental - lastMonthMental) / lastMonthMental) * 100 : 0;
@@ -191,9 +220,9 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   };
 
   // 技術スコア推移
-  const skillMonthly = groupByMonth(skillLogs, ["shoot", "pass", "dribble", "defense", "tactic"]);
+  const skillMonthly = groupByMonth(skillLogs, ["dribble_count", "shoot_success", "pass_success", "defense_success", "decision_correct"]);
   const skillMonths = Object.keys(skillMonthly).sort();
-  const skillSeries = ["shoot", "pass", "dribble", "defense", "tactic"].map(key => ({
+  const skillSeries = ["dribble_count", "shoot_success", "pass_success", "defense_success", "decision_correct"].map(key => ({
     name: key,
     type: "line",
     data: skillMonths.map(m => skillMonthly[m][key] || 0),
@@ -235,8 +264,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   useEffect(() => {
     if (growthChartRef.current) {
       const months = physicalLogs.map(l => l.date.slice(5, 7) + '月');
-      const skillSum = skillLogs.map(l => [l.shoot, l.pass, l.dribble, l.defense, l.tactic].reduce((a, b) => a + Number(b), 0));
-      const physicalAvg = physicalLogs.map(l => (Number(l.height) + Number(l.weight) + Number(l.run)) / 3);
+      const skillSum = skillLogs.map(l => [l.dribble_count, l.shoot_success, l.pass_success, l.defense_success, l.decision_correct].reduce((a, b) => a + Number(b), 0));
+      const physicalAvg = physicalLogs.map(l => (Number(l.height) + Number(l.weight) + Number(l.run50m || 0)) / 3);
       const overall = skillSum.map((v, i) => Math.round((v + (physicalAvg[i] || 0)) / 2));
       const growthOption = {
         tooltip: { trigger: "axis" },
@@ -289,8 +318,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   // 選手比較グラフ（例: 最新スキル評価 vs チーム平均/トップ）
   useEffect(() => {
     if (playerComparisonChartRef.current && activeTab === "選手比較") {
-      const latest = skillLogs[0] || { shoot: 0, pass: 0, dribble: 0, defense: 0, tactic: 0 };
-      const self = [latest.shoot, latest.pass, latest.dribble, latest.defense, latest.tactic].map(Number);
+      const latest = skillLogs[0] || { dribble_count: 0, shoot_success: 0, pass_success: 0, defense_success: 0, decision_correct: 0 };
+      const self = [latest.dribble_count, latest.shoot_success, latest.pass_success, latest.defense_success, latest.decision_correct].map(Number);
       const teamAvg = [60, 65, 62, 60, 63]; // 仮
       const top = [90, 92, 88, 85, 90]; // 仮
       const playerComparisonOption = {
@@ -362,6 +391,94 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
     }
   }, [activeTab, simpleMonths.join(), skillGrowth.join(), physicalGrowth.join()]);
 
+  // 最新履歴から成長予測APIを呼ぶ
+  useEffect(() => {
+    if (logs.length === 0) return;
+    const latest = logs[0];
+    if (!latest) return;
+    setGrowthLoading(true);
+    setGrowthError(null);
+    fetchGrowthPrediction({
+      age: latest.age,
+      gender: latest.gender,
+      run50m: latest.run50m,
+      shuttle_run: latest.shuttle_run,
+      jump: latest.jump,
+      sit_up: latest.sit_up,
+      sit_and_reach: latest.sit_and_reach,
+    })
+      .then(setGrowthPrediction)
+      .catch(e => setGrowthError(e.message))
+      .finally(() => setGrowthLoading(false));
+  }, [logs]);
+
+  // グラフ描画
+  useEffect(() => {
+    if (!growthChartRef.current || !growthPrediction) return;
+    const months = ['現在', '1ヶ月後', '2ヶ月後', '3ヶ月後'];
+    const keys = ['run50m', 'shuttle_run', 'jump', 'sit_up', 'sit_and_reach'];
+    const labels = ['50m走', 'シャトルラン', '立ち幅跳び', '上体起こし', '長座体前屈'];
+    const start = growthPrediction.start;
+    const pred = growthPrediction.growth_prediction;
+    const series = keys.map((k, i) => ({
+      name: labels[i],
+      type: 'line',
+      data: [start[k], ...pred[k]],
+      smooth: true,
+      lineStyle: { width: 3, type: 'solid' },
+      symbol: 'circle',
+    }));
+    const option = {
+      tooltip: { trigger: 'axis' },
+      legend: { data: labels },
+      xAxis: { type: 'category', data: months },
+      yAxis: { type: 'value' },
+      series,
+    };
+    const chart = echarts.init(growthChartRef.current as HTMLDivElement);
+    chart.setOption(option as any);
+    return () => chart.dispose();
+  }, [growthPrediction]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setAdviceResult(null);
+    try {
+      const input = {
+        date: form.date,
+        age: Number(form.age),
+        gender: form.gender,
+        run50m: Number(form.run50m),
+        shuttle_run: Number(form.shuttle_run),
+        jump: Number(form.jump),
+        sit_up: Number(form.sit_up),
+        sit_and_reach: Number(form.sit_and_reach),
+      };
+      const result = await fetchAdvice(input);
+      setAdviceResult(result);
+      // Supabaseに保存
+      await saveAdviceLog({
+        user_id: user?.id,
+        ...input,
+        advice: result.advice,
+      });
+      // 保存後に履歴を再取得
+      if (user?.id) {
+        getAdviceLogs(user.id).then(setLogs).catch(console.error);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen pb-16">
       <div className="bg-blue-600 text-white w-full top-0 z-20 shadow-md">
@@ -371,26 +488,30 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
         </div>
       </div>
       <div className="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-          <div className="text-gray-500 text-sm mb-1">総合評価</div>
-          <div className="text-3xl font-bold mb-1">{totalScore}点</div>
-          <div className="text-green-600 text-xs">先月比 {growthRate >= 0 ? '+' : ''}{growthRate.toFixed(1)}%</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-          <div className="text-gray-500 text-sm mb-1">成長率</div>
-          <div className="text-3xl font-bold mb-1">{growthRate.toFixed(1)}%</div>
-          <div className="text-green-600 text-xs">平均より +3.2%</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-          <div className="text-gray-500 text-sm mb-1">練習時間</div>
-          <div className="text-3xl font-bold mb-1">{totalPracticeHours}時間</div>
-          <div className="text-blue-600 text-xs">今月 {totalPracticeHours}時間</div>
-        </div>
-        <div className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
-          <div className="text-gray-500 text-sm mb-1">試合出場</div>
-          <div className="text-3xl font-bold mb-1">{thisMonthMatches.length}試合</div>
-          <div className="text-purple-600 text-xs">今月 {thisMonthMatches.length}試合</div>
-        </div>
+        {activeTab !== "AIコーチ" && (
+          <>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+              <div className="text-gray-500 text-sm mb-1">総合評価</div>
+              <div className="text-3xl font-bold mb-1">{skillLogs[0] ? [skillLogs[0].dribble_count, skillLogs[0].shoot_success, skillLogs[0].pass_success, skillLogs[0].defense_success, skillLogs[0].decision_correct].reduce((a, b) => a + Number(b), 0) : '--'}<span className="text-base text-gray-500">点</span></div>
+              <div className="text-green-600 text-xs">先月比 {growthRate >= 0 ? '+' : ''}{growthRate.toFixed(1)}%</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+              <div className="text-gray-500 text-sm mb-1">成長率</div>
+              <div className="text-3xl font-bold mb-1">{growthRate.toFixed(1)}%</div>
+              <div className="text-green-600 text-xs">平均より +3.2%</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+              <div className="text-gray-500 text-sm mb-1">練習時間</div>
+              <div className="text-3xl font-bold mb-1">{totalPracticeHours}時間</div>
+              <div className="text-blue-600 text-xs">今月 {totalPracticeHours}時間</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center">
+              <div className="text-gray-500 text-sm mb-1">試合出場</div>
+              <div className="text-3xl font-bold mb-1">{thisMonthMatches.length}試合</div>
+              <div className="text-purple-600 text-xs">今月 {thisMonthMatches.length}試合</div>
+            </div>
+          </>
+        )}
       </div>
       <header className="bg-blue-600 text-white p-4 fixed w-full top-0 z-10 shadow-md">
         <div className="flex justify-between items-center">
@@ -402,66 +523,255 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
         <div className="mt-3 flex justify-between items-center">
           <div className="text-white font-bold">{selectedPlayer}</div>
           <div className="text-right">
-            <h2 className="text-sm font-medium">青葉サッカークラブ U-12</h2>
+            <h2 className="text-sm font-medium">TAKUMA.jr</h2>
             <p className="text-xs opacity-80">ポジション: ミッドフィールダー</p>
           </div>
         </div>
       </header>
       <main className="pt-32 px-4 pb-20">
         {/* サマリーカード */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
-            <div className="flex items-center mb-2"><i className="fas fa-chart-line text-blue-500 mr-2"></i>総合評価</div>
-            <div className="text-3xl font-bold">{skillLogs[0] ? [skillLogs[0].shoot, skillLogs[0].pass, skillLogs[0].dribble, skillLogs[0].defense, skillLogs[0].tactic].reduce((a, b) => a + Number(b), 0) : '--'}<span className="text-base text-gray-500">点</span></div>
-            <div className="flex items-center text-xs text-green-600 mt-1"><i className="fas fa-arrow-up mr-1"></i>先月比 +3点</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
-            <div className="flex items-center mb-2"><i className="fas fa-rocket text-green-500 mr-2"></i>成長率</div>
-            <div className="text-3xl font-bold">{growthRate}<span className="text-base text-gray-500">%</span></div>
-            <div className="flex items-center text-xs text-green-600 mt-1"><i className="fas fa-arrow-up mr-1"></i>平均より +{growthRate.toFixed(1)}%</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
-            <div className="flex items-center mb-2"><i className="fas fa-stopwatch text-amber-500 mr-2"></i>練習時間</div>
-            <div className="text-3xl font-bold">{totalPracticeHours}<span className="text-base text-gray-500">時間</span></div>
-            <div className="flex items-center text-xs text-blue-600 mt-1"><i className="fas fa-clock mr-1"></i>今月 {totalPracticeHours}時間</div>
-          </div>
-          <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
-            <div className="flex items-center mb-2"><i className="fas fa-trophy text-purple-500 mr-2"></i>試合出場</div>
-            <div className="text-3xl font-bold">{thisMonthMatches.length}<span className="text-base text-gray-500">試合</span></div>
-            <div className="flex items-center text-xs text-blue-600 mt-1"><i className="fas fa-futbol mr-1"></i>先発 {thisMonthMatches.length}回</div>
-          </div>
-        </div>
-        {/* タブ */}
-        <div className="mb-4">
-          <div className="grid grid-cols-4 gap-2">
-            {["成長推移", "試合統計", "選手比較", "強み弱み"].map(tab => (
-              <button
-                key={tab}
-                className={`text-xs py-2 rounded-lg font-bold ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-        {/* グラフ＋成長率バー＋解説 */}
-        {activeTab === "成長推移" && (
-          <div className="bg-white rounded-xl shadow p-6 mt-8 mb-6">
-            <h2 className="text-lg font-bold mb-4">成長推移</h2>
-            <div id="simpleGrowthChart" style={{ width: '100%', height: 260 }} />
+        {activeTab !== "AIコーチ" && (
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
+              <div className="flex items-center mb-2"><i className="fas fa-chart-line text-blue-500 mr-2"></i>総合評価</div>
+              <div className="text-3xl font-bold">{skillLogs[0] ? [skillLogs[0].dribble_count, skillLogs[0].shoot_success, skillLogs[0].pass_success, skillLogs[0].defense_success, skillLogs[0].decision_correct].reduce((a, b) => a + Number(b), 0) : '--'}<span className="text-base text-gray-500">点</span></div>
+              <div className="flex items-center text-xs text-green-600 mt-1"><i className="fas fa-arrow-up mr-1"></i>先月比 +3点</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
+              <div className="flex items-center mb-2"><i className="fas fa-rocket text-green-500 mr-2"></i>成長率</div>
+              <div className="text-3xl font-bold">{growthRate}<span className="text-base text-gray-500">%</span></div>
+              <div className="flex items-center text-xs text-green-600 mt-1"><i className="fas fa-arrow-up mr-1"></i>平均より +{growthRate.toFixed(1)}%</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
+              <div className="flex items-center mb-2"><i className="fas fa-stopwatch text-amber-500 mr-2"></i>練習時間</div>
+              <div className="text-3xl font-bold">{totalPracticeHours}<span className="text-base text-gray-500">時間</span></div>
+              <div className="flex items-center text-xs text-blue-600 mt-1"><i className="fas fa-clock mr-1"></i>今月 {totalPracticeHours}時間</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 flex flex-col justify-between">
+              <div className="flex items-center mb-2"><i className="fas fa-trophy text-purple-500 mr-2"></i>試合出場</div>
+              <div className="text-3xl font-bold">{thisMonthMatches.length}<span className="text-base text-gray-500">試合</span></div>
+              <div className="flex items-center text-xs text-blue-600 mt-1"><i className="fas fa-futbol mr-1"></i>先発 {thisMonthMatches.length}回</div>
+            </div>
           </div>
         )}
-        {/* コーチのハイライト・アドバイス */}
-        {activeTab === "成長推移" && (
-          <div className="bg-white rounded-xl shadow p-4 mb-6">
-            <h3 className="text-base font-bold mb-2 flex items-center"><i className="fas fa-lightbulb text-amber-500 mr-2"></i>コーチからのハイライト・アドバイス</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li>・シュート精度が大幅に向上。右足の決定力が増した。</li>
-              <li>・試合中の状況判断力が向上。冷静なプレーができている。</li>
-              <li>・今後は左足のキック力強化と守備意識の向上が課題。</li>
-            </ul>
+        {/* タブ */}
+        <div className="mb-4">
+          <div className="grid grid-cols-5 gap-2">
+            {activeTab === "AIコーチ"
+              ? ["AIコーチ"].map(tab => (
+                  <button
+                    key={tab}
+                    className={`text-xs py-2 rounded-lg font-bold bg-blue-600 text-white`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))
+              : ["AIコーチ", "成長推移", "試合統計", "選手比較", "強み弱み"].map(tab => (
+                  <button
+                    key={tab}
+                    className={`text-xs py-2 rounded-lg font-bold ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                ))}
           </div>
+        </div>
+        {/* --- AIコーチタブ --- */}
+        {activeTab === "AIコーチ" && (
+          <>
+            <div className="bg-white rounded-xl shadow p-6 mb-6">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><i className="fas fa-dumbbell text-blue-500"></i>AIコーチ体力アドバイス</h2>
+              <form className="space-y-6" onSubmit={handleSubmit}>
+                {/* 基本情報 */}
+                <div className="bg-blue-50 rounded-lg p-4 mb-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
+                      <input type="date" name="date" value={form.date} onChange={handleChange} className="border rounded px-3 py-2 w-full" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700">年齢</label>
+                      <input type="number" name="age" value={form.age} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 10" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700">性別</label>
+                      <select name="gender" value={form.gender} onChange={handleChange} className="border rounded px-3 py-2 w-full" required>
+                        <option value="">選択</option>
+                        <option value="boy">男子</option>
+                        <option value="girl">女子</option>
+                      </select>
+                    </div>
+                    <div></div>
+                  </div>
+                </div>
+                {/* 測定項目 */}
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-running mr-1"></i>50m走 <span className='text-gray-400'>(秒)</span></label>
+                      <input type="number" step="0.01" name="run50m" value={form.run50m} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 9.2" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-exchange-alt mr-1"></i>シャトルラン <span className='text-gray-400'>(回)</span></label>
+                      <input type="number" name="shuttle_run" value={form.shuttle_run} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 30" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-shoe-prints mr-1"></i>立ち幅跳び <span className='text-gray-400'>(cm)</span></label>
+                      <input type="number" name="jump" value={form.jump} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 150" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-child mr-1"></i>上体起こし <span className='text-gray-400'>(回)</span><span className='text-xs text-gray-500 ml-1'>(30秒間で何回できるか)</span></label>
+                      <input type="number" name="sit_up" value={form.sit_up} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 20" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-arrows-alt-v mr-1"></i>長座体前屈 <span className='text-gray-400'>(cm)</span></label>
+                      <input type="number" name="sit_and_reach" value={form.sit_and_reach} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 35" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end mt-2">
+                  <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 font-bold text-base" disabled={loading}>
+                    {loading ? '診断中...' : 'AIアドバイスを受ける'}
+                  </button>
+                </div>
+              </form>
+              {error && <div className="text-red-500 mt-2">{error}</div>}
+              {/* 診断履歴表示 */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                <h2 className="text-base font-bold mb-2">診断履歴</h2>
+                {logs.length === 0 && <div className="text-gray-400 text-sm">履歴がありません</div>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {logs.map(log => {
+                    const isOpen = adviceResult && ((adviceResult as any).id ? (adviceResult as any).id === log.id : (adviceResult as any).date === log.date && (adviceResult as any).created_at === log.created_at);
+                    return (
+                      <div key={log.id} className={`bg-white rounded-lg shadow flex flex-col gap-1 p-4 relative group border hover:border-blue-400 transition cursor-pointer ${isOpen ? 'ring-2 ring-blue-400' : ''}`}
+                        onClick={() => setAdviceResult(isOpen ? null : log)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <i className="fas fa-notes-medical text-blue-500"></i>
+                          <span className="text-xs text-gray-500">{log.date || log.created_at?.slice(0,10)}</span>
+                          <span className="ml-2 text-xs text-blue-500 flex items-center gap-1"><i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`}></i>{isOpen ? '閉じる' : 'クリックで詳細'}</span>
+                          <button
+                            className="ml-auto text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                            title="削除"
+                            onClick={e => { e.stopPropagation(); if(window.confirm('この診断履歴を削除しますか？')) { deleteAdviceLog(log.id).then(()=>{ if(user?.id) getAdviceLogs(user.id).then(setLogs); }); } }}
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                        <div className="text-sm font-bold">年齢: {log.age} / 性別: {log.gender}</div>
+                        <div className="text-xs text-gray-600">50m走: {log.run50m}秒 / シャトルラン: {log.shuttle_run}回</div>
+                        <div className="text-xs text-gray-600">立ち幅跳び: {log.jump}cm / 上体起こし: {log.sit_up}回 / 長座体前屈: {log.sit_and_reach}cm</div>
+                        {isOpen && (
+                          <div className="mt-3 border-t pt-3 animate-fade-in">
+                            {log.scores && (
+                              <>
+                                <div className="mb-2 font-bold">スコア</div>
+                                <ul className="text-sm grid grid-cols-2 gap-2">
+                                  {(Object.entries(log.scores) as [string, any][]).map(([k, v]) => (
+                                    <li key={k}>{k}: <span className="font-bold">{v}</span></li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
+                            <div className="mb-2 font-bold mt-2">AIコーチのアドバイス</div>
+                            <div className="bg-blue-50 rounded p-3 text-sm mb-2" style={{ whiteSpace: 'pre-line' }}>
+                              {log.advice}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-6 mb-6">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><i className="fas fa-dumbbell text-blue-500"></i>5種目別カスタム練習メニュー</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
+                  <i className="fas fa-running text-2xl text-blue-400 mt-1"></i>
+                  <div>
+                    <div className="font-bold text-blue-700 mb-1">50m走</div>
+                    <ul className="list-disc pl-5 text-sm text-blue-900">
+                      <li>ダッシュ練習</li>
+                      <li>ミニハードル走</li>
+                      <li>フォーム改善</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
+                  <i className="fas fa-exchange-alt text-2xl text-green-400 mt-1"></i>
+                  <div>
+                    <div className="font-bold text-green-700 mb-1">シャトルラン</div>
+                    <ul className="list-disc pl-5 text-sm text-green-900">
+                      <li>持久走</li>
+                      <li>インターバルトレーニング</li>
+                      <li>リズム走</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
+                  <i className="fas fa-shoe-prints text-2xl text-yellow-400 mt-1"></i>
+                  <div>
+                    <div className="font-bold text-yellow-700 mb-1">立ち幅跳び</div>
+                    <ul className="list-disc pl-5 text-sm text-yellow-900">
+                      <li>ジャンプドリル</li>
+                      <li>スクワット</li>
+                      <li>体幹トレーニング</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-pink-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
+                  <i className="fas fa-child text-2xl text-pink-400 mt-1"></i>
+                  <div>
+                    <div className="font-bold text-pink-700 mb-1">上体起こし</div>
+                    <ul className="list-disc pl-5 text-sm text-pink-900">
+                      <li>腹筋運動</li>
+                      <li>体幹プランク</li>
+                      <li>メディシンボール投げ</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 flex gap-3 items-start shadow-sm sm:col-span-2">
+                  <i className="fas fa-arrows-alt-v text-2xl text-purple-400 mt-1"></i>
+                  <div>
+                    <div className="font-bold text-purple-700 mb-1">長座体前屈</div>
+                    <ul className="list-disc pl-5 text-sm text-purple-900">
+                      <li>ストレッチ</li>
+                      <li>ヨガ</li>
+                      <li>柔軟体操</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-6 mb-6">
+              <h2 className="text-lg font-bold mb-4">成長予想グラフ（3ヶ月）</h2>
+              {growthLoading && <div>予測中...</div>}
+              {growthError && <div className="text-red-500">{growthError}</div>}
+              <div ref={growthChartRef} style={{ width: '100%', height: 300 }} />
+            </div>
+          </>
+        )}
+        {/* --- 成長推移タブ --- */}
+        {activeTab === "成長推移" && (
+          <>
+            <div className="bg-white rounded-xl shadow p-6 mt-8 mb-6">
+              <h2 className="text-lg font-bold mb-4">成長推移</h2>
+              <div id="simpleGrowthChart" style={{ width: '100%', height: 260 }} />
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 mb-6">
+              <h3 className="text-base font-bold mb-2 flex items-center"><i className="fas fa-lightbulb text-amber-500 mr-2"></i>コーチからのハイライト・アドバイス</h3>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li>・シュート精度が大幅に向上。右足の決定力が増した。</li>
+                <li>・試合中の状況判断力が向上。冷静なプレーができている。</li>
+                <li>・今後は左足のキック力強化と守備意識の向上が課題。</li>
+              </ul>
+            </div>
+          </>
         )}
         {/* 他タブは従来通り */}
         {activeTab === "試合統計" && (

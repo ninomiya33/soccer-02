@@ -22,13 +22,17 @@ export const practiceLogService = {
     return data || []
   },
   async addLog(log: Omit<PracticeLog, 'id' | 'created_at'>): Promise<PracticeLog> {
+    const { id, ...logWithoutId } = log as any;
     const { data, error } = await supabase
       .from('practice_logs')
-      .insert([log])
+      .insert([logWithoutId])
       .select()
-      .single()
-    if (error) throw new Error(error.message)
-    return data
+      .single();
+    if (error) {
+      console.error('practice_logs insert error:', error);
+      throw new Error(error.message);
+    }
+    return data;
   },
   async updateLog(id: number, updates: Partial<PracticeLog>): Promise<PracticeLog> {
     const { data, error } = await supabase

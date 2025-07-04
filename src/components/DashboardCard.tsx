@@ -5,15 +5,16 @@ interface DashboardCardProps {
     date: string;
     height: string;
     weight: string;
-    run: string;
+    run50m?: string;
   }[];
   skillLogs: {
     date: string;
-    shoot: string;
-    pass: string;
-    dribble: string;
-    defense: string;
-    tactic: string;
+    dribble_count: string;
+    shoot_success: string;
+    pass_success: string;
+    defense_success: string;
+    decision_correct: string;
+    total_score: string;
     comment: string;
   }[];
   practiceLogs: {
@@ -38,7 +39,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ physicalLogs, skillLogs, 
   // スキル評価（最新合計点）
   const latestSkill = skillLogs[0];
   const skillTotal = latestSkill
-    ? [latestSkill.shoot, latestSkill.pass, latestSkill.dribble, latestSkill.defense, latestSkill.tactic].reduce((a, b) => a + Number(b), 0)
+    ? [latestSkill.shoot_success, latestSkill.pass_success, latestSkill.dribble_count, latestSkill.defense_success, latestSkill.decision_correct].reduce((a, b) => a + Number(b), 0)
     : 0;
   // 練習記録（合計時間）
   const totalPracticeHours = practiceLogs.reduce((sum, log) => {

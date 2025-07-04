@@ -1,0 +1,179 @@
+import React, { useEffect, useRef } from 'react';
+import * as echarts from 'echarts';
+import { skillLogService, SkillLog } from '../services/skillLogService.js';
+import { useAuth } from '../contexts/AuthContext.js';
+import { playerService } from '../services/playerService.js';
+
+const SkillPage: React.FC = () => {
+  const { user } = useAuth();
+  const [playerId, setPlayerId] = React.useState<number | null>(null);
+  const [skillLogs, setSkillLogs] = React.useState<SkillLog[]>([]);
+  const radarRef = useRef<HTMLDivElement | null>(null);
+  const lineRef = useRef<HTMLDivElement | null>(null);
+  const barRef = useRef<HTMLDivElement | null>(null);
+
+  // playerId取得
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const players = await playerService.getPlayers(user.id);
+      if (players.length > 0) setPlayerId(players[0].id ?? null);
+    })();
+  }, [user]);
+
+  // skillLogs取得
+  useEffect(() => {
+    if (!playerId) return;
+    (async () => {
+      const logs = await skillLogService.getLogs(playerId);
+      setSkillLogs(logs);
+    })();
+  }, [playerId]);
+
+  // レーダーチャート
+  useEffect(() => {
+    if (!skillLogs.length) return;
+    const latest = skillLogs[skillLogs.length - 1];
+    if (radarRef.current) {
+      const chart = echarts.init(radarRef.current);
+      chart.setOption({
+        title: { text: 'スキルバランス（最新）', left: 'center', textStyle: { fontSize: 16 } },
+        tooltip: {},
+        radar: {
+          indicator: [
+            { name: 'ドリブル', max: 50 },
+            { name: 'シュート', max: 50 },
+            { name: 'パス', max: 50 },
+            { name: '守備', max: 50 },
+            { name: '戦術', max: 50 },
+          ],
+        },
+        series: [{
+          type: 'radar',
+          data: [
+            {
+              value: [
+                latest?.dribble ?? 0,
+                latest?.shoot ?? 0,
+                latest?.pass ?? 0,
+                latest?.defense ?? 0,
+                latest?.tactic ?? 0,
+              ],
+              name: latest?.date || '',
+            },
+          ],
+        }],
+      });
+      const handleResize = () => chart.resize();
+      window.addEventListener('resize', handleResize);
+      return () => { window.removeEventListener('resize', handleResize); chart.dispose(); };
+    }
+  }, [skillLogs]);
+
+  // 折れ線グラフ
+  useEffect(() => {
+    if (!skillLogs.length) return;
+    if (lineRef.current) {
+      const chart = echarts.init(lineRef.current);
+      chart.setOption({
+        title: { text: 'スキル推移', left: 'center', textStyle: { fontSize: 16 } },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 30, data: ['ドリブル', 'シュート', 'パス', '守備', '戦術'], icon: 'circle' },
+        grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
+        xAxis: { type: 'category', data: skillLogs.map(l => l.date) },
+        yAxis: { type: 'value', name: '点数', position: 'left' },
+        series: [
+          { name: 'ドリブル', type: 'line', data: skillLogs.map(l => l.dribble), symbol: 'circle', symbolSize: 10, smooth: true },
+          { name: 'シュート', type: 'line', data: skillLogs.map(l => l.shoot), symbol: 'circle', symbolSize: 10, smooth: true },
+          { name: 'パス', type: 'line', data: skillLogs.map(l => l.pass), symbol: 'circle', symbolSize: 10, smooth: true },
+          { name: '守備', type: 'line', data: skillLogs.map(l => l.defense), symbol: 'circle', symbolSize: 10, smooth: true },
+          { name: '戦術', type: 'line', data: skillLogs.map(l => l.tactic), symbol: 'circle', symbolSize: 10, smooth: true },
+        ],
+      });
+      const handleResize = () => chart.resize();
+      window.addEventListener('resize', handleResize);
+      return () => { window.removeEventListener('resize', handleResize); chart.dispose(); };
+    }
+  }, [skillLogs]);
+
+  // 棒グラフ（最新値）
+  useEffect(() => {
+    if (!skillLogs.length) return;
+    const latest = skillLogs[skillLogs.length - 1];
+    if (barRef.current) {
+      const chart = echarts.init(barRef.current);
+      chart.setOption({
+        title: { text: 'スキル最新値', left: 'center', textStyle: { fontSize: 16 } },
+        tooltip: {},
+        xAxis: { type: 'category', data: ['ドリブル', 'シュート', 'パス', '守備', '戦術'] },
+        yAxis: { type: 'value', name: '点数' },
+        series: [{
+          type: 'bar',
+          data: [
+            latest?.dribble ?? 0,
+            latest?.shoot ?? 0,
+            latest?.pass ?? 0,
+            latest?.defense ?? 0,
+            latest?.tactic ?? 0,
+          ],
+          barWidth: 40,
+        }],
+      });
+      const handleResize = () => chart.resize();
+      window.addEventListener('resize', handleResize);
+      return () => { window.removeEventListener('resize', handleResize); chart.dispose(); };
+    }
+  }, [skillLogs]);
+
+  // スキル評価削除ハンドラ
+  const handleDeleteSkillLog = async (id: number | undefined) => {
+    if (!id) return;
+    if (!window.confirm('本当に削除しますか？')) return;
+    try {
+      await skillLogService.deleteLog(id);
+      if (!playerId) return;
+      const logs = await skillLogService.getLogs(playerId);
+      setSkillLogs(logs);
+    } catch (err) {
+      alert('削除に失敗しました');
+      console.error(err);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 min-h-screen pb-16">
+      <h1 className="text-2xl font-bold text-center pt-8">スキル評価</h1>
+      <div className="max-w-2xl mx-auto p-4">
+        <div ref={radarRef} style={{ width: '100%', height: 260, marginBottom: 32 }} />
+        <div ref={lineRef} style={{ width: '100%', height: 260, marginBottom: 32 }} />
+        <div ref={barRef} style={{ width: '100%', height: 260, marginBottom: 32 }} />
+        <h3 className="text-base font-medium mt-6 mb-2">スキル評価履歴</h3>
+        <div className="space-y-2">
+          {skillLogs.length === 0 && <div className="text-gray-400 text-sm">データがありません</div>}
+          {skillLogs.slice().reverse().map((log, i) => (
+            <div key={log.id || i} className="p-3 rounded border bg-gray-50 flex flex-col md:flex-row md:items-center md:gap-6 text-sm relative">
+              <span className="font-bold mr-2">{log.date}</span>
+              <span>ドリブル: <span className="font-bold">{log.dribble}</span></span>
+              <span>シュート: <span className="font-bold">{log.shoot}</span></span>
+              <span>パス: <span className="font-bold">{log.pass}</span></span>
+              <span>守備: <span className="font-bold">{log.defense}</span></span>
+              <span>戦術: <span className="font-bold">{log.tactic}</span></span>
+              {log.comment && <span>コメント: <span className="font-bold">{log.comment}</span></span>}
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                title="削除"
+                onClick={() => handleDeleteSkillLog(log.id)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SkillPage; 
