@@ -10,6 +10,8 @@ export interface Video {
   views?: number;
   thumbnail?: string;
   duration?: string;
+  date?: string; // 投稿フォームで指定した日付
+  folder?: string; // フォルダ名
 }
 
 export const videoService = {

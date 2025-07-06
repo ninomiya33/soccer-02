@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BottomTabBar from '../components/BottomTabBar.js';
 import { useAuth } from '../contexts/AuthContext.js';
 import { videoService, Video } from '../services/videoService.js';
+import { useRef } from 'react';
 
 const categories = [
   { key: 'all', label: 'すべて' },
@@ -87,6 +88,19 @@ const VideosPage: React.FC = () => {
   const [sort, setSort] = useState<'new' | 'old' | 'views'>('new');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>(null);
+  // アコーディオン開閉状態
+  const [openDates, setOpenDates] = useState<Record<string, boolean>>({});
+  const toggleDate = (date: string) => {
+    setOpenDates(prev => ({ ...prev, [date]: !prev[date] }));
+  };
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  // フォルダの開閉状態を管理
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+  const toggleFolder = (folder: string) => {
+    setOpenFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
+  };
 
   useEffect(() => {
     videoService.getVideos().then(setVideos).catch(console.error);
@@ -101,6 +115,42 @@ const VideosPage: React.FC = () => {
       if (sort === 'views') return (b.views || 0) - (a.views || 0);
       return 0;
     });
+
+  // タイトルごとにグループ化
+  const groupedByTitle = filteredVideos.reduce((acc, video) => {
+    const title = video.title || '未設定';
+    if (!acc[title]) acc[title] = [];
+    acc[title].push(video);
+    return acc;
+  }, {} as Record<string, Video[]>);
+
+  // folderごとにグループ化
+  const groupedByFolder = filteredVideos.reduce((acc, video) => {
+    const folder = video.folder || '未分類';
+    if (!acc[folder]) acc[folder] = [];
+    acc[folder].push(video);
+    return acc;
+  }, {} as Record<string, Video[]>);
+
+  // 選択切り替え
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+  const clearSelection = () => setSelectedIds([]);
+
+  // フォルダ作成・移動処理
+  const handleCreateFolder = async () => {
+    const folderName = folderInputRef.current?.value?.trim();
+    if (!folderName || selectedIds.length === 0) return;
+    try {
+      await Promise.all(selectedIds.map(id => videoService.updateVideo(id, { folder: folderName })));
+      setVideos(videos => videos.map(v => selectedIds.includes(v.id!) ? { ...v, folder: folderName } : v));
+      setFolderModalOpen(false);
+      clearSelection();
+    } catch (e) {
+      alert('フォルダ作成・移動に失敗しました');
+    }
+  };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, files } = e.target as any;
@@ -145,6 +195,7 @@ const VideosPage: React.FC = () => {
         uploaded_by: user.id,
         thumbnail,
         duration,
+        date: form.date ? new Date(form.date).toISOString() : undefined, // ← 修正
       };
       const saved = await videoService.addVideo(newVideo);
       setVideos([saved, ...videos]);
@@ -229,39 +280,77 @@ const VideosPage: React.FC = () => {
             </button>
           ))}
         </div>
+        {selectedIds.length > 0 && (
+          <div className="flex gap-2 items-center mt-2">
+            <button className="bg-yellow-500 text-white px-4 py-1 rounded font-bold shadow hover:bg-yellow-600" onClick={() => setFolderModalOpen(true)}>
+              フォルダ作成/移動
+            </button>
+            <span className="text-sm text-gray-600">{selectedIds.length}件選択中</span>
+            <button className="text-xs text-gray-400 underline" onClick={clearSelection}>選択解除</button>
+          </div>
+        )}
       </div>
+      {/* フォルダ名入力モーダル */}
+      {folderModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
+            <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={() => setFolderModalOpen(false)} aria-label="閉じる">×</button>
+            <h2 className="text-lg font-bold mb-4">フォルダ名を入力</h2>
+            <input ref={folderInputRef} type="text" className="border rounded px-3 py-2 w-full mb-4" placeholder="例: 2024夏合宿" />
+            <button className="bg-yellow-500 text-white px-4 py-2 rounded w-full font-bold hover:bg-yellow-600" onClick={handleCreateFolder}>決定</button>
+          </div>
+        </div>
+      )}
       {/* 動画リスト */}
       <main className="px-2 pt-2 pb-20 max-w-xl mx-auto">
-        {filteredVideos.map(video => (
-          <div key={video.id} className="bg-white rounded-xl shadow mb-6 overflow-hidden relative">
-            <div className="relative">
-              <img src={video.thumbnail} alt={video.title} className="w-full h-48 object-cover" />
-              <a href={video.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-black/60 rounded-full p-3"><i className="fas fa-play text-white text-2xl"></i></span>
-              </a>
-              <span className="absolute bottom-2 right-2 bg-black/80 text-white text-xs rounded px-2 py-0.5">{video.views ?? 0}回</span>
-            </div>
-            <div className="p-3">
-              <div className="font-bold text-base mb-1 flex items-center">{video.title}</div>
-              <div className="text-xs text-gray-500 mb-1">{video.created_at ? new Date(video.created_at).toLocaleString('ja-JP') : ''}</div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={
-                    `px-2 py-0.5 rounded text-xs font-bold ` +
-                    (video.type === 'match'
-                      ? 'bg-blue-100 text-blue-600'
-                      : video.type === 'practice'
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-amber-100 text-amber-600')
-                  }
-                >
-                  {video.type === 'match' ? '試合映像' : video.type === 'practice' ? '練習映像' : '技術分析'}
-                </span>
+        {Object.entries(groupedByFolder).map(([folder, videos]) => (
+          <div key={folder} className="mb-8">
+            <button
+              className="flex items-center gap-2 mb-2 w-full text-left px-2 py-2 bg-yellow-100 hover:bg-yellow-200 rounded font-bold text-lg border border-yellow-200 shadow focus:outline-none"
+              onClick={() => toggleFolder(folder)}
+            >
+              <span className="text-2xl"><i className="fas fa-folder" /></span>
+              <span className="flex-1">{folder}（{videos.length}件）</span>
+              <span className="text-xl">{openFolders[folder] ? '▲' : '▼'}</span>
+            </button>
+            <div className={`transition-all duration-300 ${openFolders[folder] ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
+              <div className="space-y-4 pl-6">
+                {videos.map(video => (
+                  <div key={video.id} className={`flex items-center gap-3 p-2 rounded-lg shadow bg-white border ${selectedIds.includes(video.id!) ? 'ring-2 ring-yellow-400' : ''}`}>
+                    <input type="checkbox" checked={selectedIds.includes(video.id!)} onChange={() => toggleSelect(video.id!)} className="accent-yellow-500 w-5 h-5" />
+                    <span className="text-xl text-yellow-500"><i className="fas fa-file-video" /></span>
+                    <div className="relative w-28 h-16 flex-shrink-0">
+                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover rounded" />
+                      <a href={video.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center">
+                        <span className="bg-black/60 rounded-full p-2"><i className="fas fa-play text-white text-lg"></i></span>
+                      </a>
+                      <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs rounded px-1 py-0.5">{video.views ?? 0}回</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold text-base mb-1 flex items-center">{video.title}</div>
+                      <div className="text-xs text-gray-500 mb-1">{video.date ? new Date(video.date).toLocaleString('ja-JP') : ''}</div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={
+                            `px-2 py-0.5 rounded text-xs font-bold ` +
+                            (video.type === 'match'
+                              ? 'bg-blue-100 text-blue-600'
+                              : video.type === 'practice'
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-amber-100 text-amber-600')
+                          }
+                        >
+                          {video.type === 'match' ? '試合映像' : video.type === 'practice' ? '練習映像' : '技術分析'}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button className="text-xs text-blue-600 underline" onClick={() => handleEditVideo(video)}>編集</button>
+                        <button className="text-xs text-red-600 underline" onClick={() => { if (video.id !== undefined) handleDeleteVideo(video.id); }}>削除</button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <button className="text-xs text-blue-600 underline" onClick={() => handleEditVideo(video)}>編集</button>
-              <button className="text-xs text-red-600 underline" onClick={() => { if (video.id !== undefined) handleDeleteVideo(video.id); }}>削除</button>
             </div>
           </div>
         ))}
