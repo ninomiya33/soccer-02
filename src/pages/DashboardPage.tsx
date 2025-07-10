@@ -19,6 +19,9 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import * as echarts from 'echarts';
 import SkillPage from './SkillPage.js';
+import CalendarWrapper from '../components/CalendarWrapper.js';
+import CustomCalendar from '../components/CustomCalendar.js';
+import './calendar-ios.css';
 
 interface DashboardPageProps {
   physicalLogs: {
@@ -131,8 +134,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   const [practiceModalOpen, setPracticeModalOpen] = useState(false);
   const [physicalModalOpen, setPhysicalModalOpen] = useState(false);
   const [skillModalOpen, setSkillModalOpen] = useState(false);
-  // 今後拡張用: 選択された追加タイプ
-  const [addType, setAddType] = useState<null | '体力測定' | 'スキル評価' | '練習記録' | '試合実績'>(null);
+
 
   // 練習記録リスト（状態管理）
   const [form, setForm] = useState({
@@ -191,6 +193,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const [playerId, setPlayerId] = useState<number | null>(null);
 
+  // 年・月・選択日を管理
+  const today = new Date();
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth()); // 0始まり
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // 練習記録がある日を配列で取得
@@ -206,12 +212,24 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   // カレンダーの日付セルに色付きバッジを表示
-  const tileContent = () => null;
+  const tileContent = ({ date, view }: { date: Date; view: string }) => {
+    if (view !== 'month') return null;
+    const d = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const hasLog = practiceLogs.some(l => l.date === d);
+    if (hasLog) {
+      return <span className="calendar-dot" />;
+    }
+    return null;
+  };
 
   // カード表示用: 選択日があればその日の記録だけ、なければ全件
   const filteredLogs = selectedDate
     ? practiceLogs.filter(log => log.date === selectedDate)
-    : practiceLogs;
+    : practiceLogs.filter(log => {
+        // カレンダー表示中の月のみ
+        const [y, m] = log.date.split('-');
+        return Number(y) === calendarYear && Number(m) === calendarMonth + 1;
+      });
 
   // フォーム入力ハンドラ
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -256,7 +274,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       console.error(err);
     }
     setPracticeModalOpen(false);
-    setAddType(null);
     setForm({ id: undefined, date: '', title: 'パス練習', duration: '1時間', description: '' });
   };
   const handlePhysicalSubmit = async (e: React.FormEvent) => {
@@ -293,7 +310,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       console.error(err);
     }
     setPhysicalModalOpen(false);
-    setAddType(null);
     setPhysicalForm({ date: '', height: '', weight: '', vision_left: '', vision_right: '', run50m: '', dash10m: '', shuttle_run: '', jump: '', sit_up: '', sit_and_reach: '', note: '' });
   };
   const handleSkillSubmit = async (e: React.FormEvent) => {
@@ -335,7 +351,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       console.error(err);
     }
     setSkillModalOpen(false);
-    setAddType(null);
     setSkillForm({ date: '', dribble_count: '', shoot_success: '', pass_success: '', defense_success: '', decision_correct: '', total_score: '', comment: '' });
   };
   const handleMatchSubmit = async (e: React.FormEvent) => {
@@ -369,7 +384,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       console.error(err);
     }
     setMatchModalOpen(false);
-    setAddType(null);
     setMatchForm({ date: '', opponent: '', result: '', score: '', note: '', status: 'win' });
   };
 
@@ -380,7 +394,6 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // 種類選択後
   const handleSelectType = (type: '体力測定' | 'スキル評価' | '練習記録' | '試合実績') => {
-    setAddType(type);
     setSelectTypeModalOpen(false);
     if (type === '練習記録') setPracticeModalOpen(true);
     if (type === '体力測定') setPhysicalModalOpen(true);
@@ -653,80 +666,154 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="bg-gray-50 min-h-screen pb-16">
-      <Header selectedPlayer={selectedPlayer} setSelectedPlayer={setSelectedPlayer} profile={profile} />
-      <main className="pt-28 px-4 pb-16">
-        <DashboardCard
-          physicalLogs={physicalLogs}
-          skillLogs={skillLogs}
-          practiceLogs={practiceLogs}
-          matchLogs={matchLogs}
-        />
-        <div className="bg-white rounded-xl shadow p-6 mt-8">
-          <h2 className="text-xl font-bold mb-4">今月の練習記録</h2>
-          <div className="flex gap-2 mb-6">
+      {/* iOS風ヘッダー */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50">
+        <div className="pt-12 pb-4 px-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">ダッシュボード</h1>
+              <p className="text-sm text-gray-500 mt-1">今日の練習記録</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
+                </svg>
+              </button>
+              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                <span className="text-white font-bold text-sm">田中</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main className="pt-32 px-6 pb-16">
+        {/* iOS風サマリーカード */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {practiceLogs.length}
+            </div>
+            <div className="text-sm text-gray-500">練習記録</div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {physicalLogs.length}
+            </div>
+            <div className="text-sm text-gray-500">体力測定</div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-yellow-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {skillLogs.length}
+            </div>
+            <div className="text-sm text-gray-500">スキル評価</div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-900 mb-1">
+              {matchLogs.length}
+            </div>
+            <div className="text-sm text-gray-500">試合結果</div>
+          </div>
+        </div>
+
+        {/* iOS風タブコンテンツ */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          {/* iOS風タブヘッダー */}
+          <div className="flex border-b border-gray-100">
             {TABS.map(tab => (
               <button
                 key={tab.key}
-                className={`px-4 py-2 rounded-t-lg font-bold border-b-2 transition-colors duration-150 ${selectedTab === tab.key ? 'border-blue-500 text-blue-600 bg-white' : 'border-transparent text-gray-400 bg-gray-100'}`}
+                className={`flex-1 py-4 px-6 text-center font-semibold text-sm transition-colors duration-200 ${
+                  selectedTab === tab.key 
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
                 onClick={() => setSelectedTab(tab.key)}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          {/* タブごとの内容 */}
+
+          {/* タブコンテンツ */}
+          <div className="p-6">
           {selectedTab === 'practice' && (
             (() => {
-              console.log('【DEBUG】practiceLogs:', practiceLogs);
-              console.log('【DEBUG】selectedDate:', selectedDate);
-              console.log('【DEBUG】filteredLogs:', filteredLogs);
               return (
                 <div>
-                  <Calendar
-                    onChange={date => {
-                      if (!date) return;
-                      const d = Array.isArray(date) ? date[0] : date;
-                      if (!d) return;
-                      const localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                      console.log('【DEBUG】カレンダー日付クリック:', localDateStr);
-                      setSelectedDate(localDateStr);
-                    }}
-                    value={selectedDate ? new Date(selectedDate) : new Date()}
-                    tileContent={tileContent}
-                    tileClassName={({ date, view }) => {
-                      if (view !== 'month') return '';
-                      const d = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                      const log = practiceLogs.find(l => l.date === d);
-                      if (log) {
-                        return typeColorMap[log.title] || 'bg-blue-100 text-blue-700 border-blue-200 font-extrabold';
-                      }
-                      return '';
-                    }}
-                    calendarType="iso8601"
-                    className="mx-auto mb-6 border-none"
-                    minDetail="year"
-                    maxDetail="month"
-                    showNeighboringMonth={true}
-                    prev2Label={"<<"}
-                    next2Label={">>"}
-                    showNavigation={true}
-                  />
-                  <div className="mt-6 space-y-4">
+                    {/* 年月選択＋1日が必ず日曜列のカレンダー */}
+                    <div className="mb-6">
+                      <CustomCalendar
+                        year={calendarYear}
+                        month={calendarMonth}
+                        selectedDate={selectedDate ?? undefined}
+                        onDateSelect={setSelectedDate}
+                        onYearChange={setCalendarYear}
+                        onMonthChange={setCalendarMonth}
+                      />
+                    </div>
+                    {/* 練習記録リスト */}
+                    <div className="space-y-4">
                     {filteredLogs.length === 0 && (
-                      <div className="text-gray-400 text-sm">練習記録がありません</div>
-                    )}
-                    {filteredLogs.map((log, i) => {
-                      console.log('【DEBUG】log:', log);
-                      return (
-                        <div key={log.id || i} className="p-4 rounded-lg shadow bg-white flex flex-col gap-2 border border-gray-100 relative">
-                          <div className="flex flex-wrap items-center gap-4 text-sm">
-                            <span>📅 <span className="font-bold">{log.date}</span></span>
-                            <span className={`font-bold px-2 py-1 rounded ${typeColorMap[log.title] || 'bg-gray-400'} text-white`}>{log.title}</span>
-                            <span>⏱ <span className="font-bold">{log.duration}</span>分</span>
+                        <div className="text-center py-12">
+                          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
                           </div>
-                          {log.description && <div className="text-gray-700 text-sm">💬 {log.description}</div>}
+                          <p className="text-gray-500 text-sm">練習記録がありません</p>
+                        </div>
+                    )}
+                      {filteredLogs.map((log, i) => (
+                        <div key={log.id || i} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 relative">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                          </div>
+                              <div>
+                                <div className="font-semibold text-gray-900">{log.title}</div>
+                                <div className="text-sm text-gray-500">{log.date}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-bold text-blue-600">{log.duration}分</div>
                           <button
-                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                                className="text-gray-400 hover:text-red-500 mt-1"
                             title="削除"
                             onClick={() => handleDeletePracticeLog(log.id)}
                           >
@@ -735,8 +822,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                             </svg>
                           </button>
                         </div>
-                      );
-                    })}
+                          </div>
+                          {log.description && (
+                            <div className="text-gray-700 text-sm bg-white rounded-xl p-3 border border-gray-100">
+                              {log.description}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                   </div>
                 </div>
               );
@@ -747,24 +840,34 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               <div ref={physicalChartRef1} style={{ width: '100%', height: 260, marginBottom: 32 }} />
               <div ref={physicalChartRef2} style={{ width: '100%', height: 260, marginBottom: 32 }} />
               <div ref={physicalChartRef3} style={{ width: '100%', height: 260, marginBottom: 32 }} />
-              <h3 className="text-base font-medium mt-6 mb-2">体力測定履歴</h3>
-              <div className="space-y-2">
-                {physicalLogs.length === 0 && <div className="text-gray-400 text-sm">データがありません</div>}
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">体力測定履歴</h3>
+                <div className="space-y-3">
+                  {physicalLogs.length === 0 && (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-sm">データがありません</p>
+                    </div>
+                  )}
                 {physicalLogs.slice().reverse().map((log, i) => (
-                  <div key={i} className="p-3 rounded border bg-gray-50 flex flex-col md:flex-row md:items-center md:gap-6 text-sm relative">
-                    <span className="font-bold mr-2">{log.date}</span>
-                    <span>身長: <span className="font-bold">{log.height}cm</span></span>
-                    <span>体重: <span className="font-bold">{log.weight}kg</span></span>
-                    <span>視力: <span className="font-bold">{log.vision_left || '-'} / {log.vision_right || '-'}</span></span>
-                    <span>50m走: <span className="font-bold">{log.run50m}秒</span></span>
-                    <span>10mダッシュ: <span className="font-bold">{log.dash10m}秒</span></span>
-                    <span>往復走: <span className="font-bold">{log.shuttle_run}回</span></span>
-                    <span>立ち幅跳び: <span className="font-bold">{log.jump}cm</span></span>
-                    <span>上体起こし: <span className="font-bold">{log.sit_up}回</span></span>
-                    <span>長座体前屈: <span className="font-bold">{log.sit_and_reach}cm</span></span>
-                    {log.note && <span>備考: <span className="font-bold">{log.note}</span></span>}
+                    <div key={i} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{log.date}</div>
+                            <div className="text-sm text-gray-500">体力測定</div>
+                          </div>
+                        </div>
                     <button
-                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                          className="text-gray-400 hover:text-red-500"
                       title="削除"
                       onClick={() => handleDeletePhysicalLog(log.id)}
                     >
@@ -772,6 +875,51 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">身長</div>
+                          <div className="font-semibold text-gray-900">{log.height}cm</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">体重</div>
+                          <div className="font-semibold text-gray-900">{log.weight}kg</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">視力</div>
+                          <div className="font-semibold text-gray-900">{log.vision_left || '-'} / {log.vision_right || '-'}</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">50m走</div>
+                          <div className="font-semibold text-gray-900">{log.run50m}秒</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">10mダッシュ</div>
+                          <div className="font-semibold text-gray-900">{log.dash10m}秒</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">往復走</div>
+                          <div className="font-semibold text-gray-900">{log.shuttle_run}回</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">立ち幅跳び</div>
+                          <div className="font-semibold text-gray-900">{log.jump}cm</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">上体起こし</div>
+                          <div className="font-semibold text-gray-900">{log.sit_up}回</div>
+                        </div>
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">長座体前屈</div>
+                          <div className="font-semibold text-gray-900">{log.sit_and_reach}cm</div>
+                        </div>
+                      </div>
+                      {log.note && (
+                        <div className="mt-3 bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs mb-1">備考</div>
+                          <div className="text-sm text-gray-900">{log.note}</div>
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>
@@ -782,29 +930,52 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
           {selectedTab === 'match' && (
             <div>
-              <div className="flex justify-end mb-4">
+                <div className="flex justify-end mb-6">
                 <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                    className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   onClick={() => setMatchModalOpen(true)}
                 >
-                  ＋試合結果を追加
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    試合結果を追加
                 </button>
               </div>
               <div className="space-y-4">
                 {matchLogs.length === 0 && (
-                  <div className="text-gray-400 text-sm">試合結果がありません</div>
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-sm">試合結果がありません</p>
+                    </div>
                 )}
                 {matchLogs.map((log, i) => (
-                  <div key={i} className="p-4 rounded-lg shadow bg-white flex flex-col gap-2 border border-gray-100 relative">
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <span>📅 <span className="font-bold">{log.date}</span></span>
-                      <span className="font-bold px-2 py-1 rounded bg-gray-200 text-gray-700">{log.opponent}</span>
-                      <span className={`font-bold px-2 py-1 rounded text-white ${log.status === 'win' ? 'bg-green-500' : log.status === 'draw' ? 'bg-yellow-500' : 'bg-red-500'}`}>{log.result}</span>
-                      <span>スコア: <span className="font-bold">{log.score}</span></span>
+                    <div key={i} className="bg-gray-50 rounded-2xl p-4 border border-gray-100 relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                            </svg>
                     </div>
-                    {log.note && <div className="text-gray-700 text-sm">💬 {log.note}</div>}
+                          <div>
+                            <div className="font-semibold text-gray-900">{log.opponent}</div>
+                            <div className="text-sm text-gray-500">{log.date}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-bold px-3 py-1 rounded-full text-sm ${
+                            log.status === 'win' ? 'bg-green-100 text-green-700' : 
+                            log.status === 'draw' ? 'bg-yellow-100 text-yellow-700' : 
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {log.result}
+                          </div>
                     <button
-                      className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                            className="text-gray-400 hover:text-red-500 mt-1"
                       title="削除"
                       onClick={() => handleDeleteMatchLog(undefined, i)}
                     >
@@ -812,44 +983,63 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs">スコア</div>
+                          <div className="font-semibold text-gray-900">{log.score}</div>
+                        </div>
+                      </div>
+                      {log.note && (
+                        <div className="mt-3 bg-white rounded-xl p-3 border border-gray-100">
+                          <div className="text-gray-500 text-xs mb-1">メモ</div>
+                          <div className="text-sm text-gray-900">{log.note}</div>
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>
               {/* 追加モーダル */}
               {matchModalOpen && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-                  <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
                     <button
-                      className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
-                      onClick={() => { setMatchModalOpen(false); setAddType(null); }}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+                        onClick={() => { setMatchModalOpen(false); }}
                       aria-label="閉じる"
                     >
                       ×
                     </button>
-                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><i className="fas fa-trophy text-amber-500"></i>試合実績を追加</h2>
+                      <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                        <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                        試合実績を追加
+                      </h2>
                     <form className="space-y-6" onSubmit={handleMatchSubmit}>
                       {/* 基本情報 */}
-                      <div className="bg-blue-50 rounded-lg p-4 mb-2">
+                        <div className="bg-blue-50 rounded-2xl p-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
-                            <input type="date" name="date" value={matchForm.date} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full" required />
+                              <label className="block text-xs font-bold mb-2 text-blue-700">日付</label>
+                              <input type="date" name="date" value={matchForm.date} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
                           </div>
                           <div>
-                            <label className="block text-xs font-bold mb-1 text-blue-700">対戦相手</label>
-                            <input type="text" name="opponent" value={matchForm.opponent} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full" required placeholder="例: FC青葉" />
+                              <label className="block text-xs font-bold mb-2 text-blue-700">対戦相手</label>
+                              <input type="text" name="opponent" value={matchForm.opponent} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required placeholder="例: FC青葉" />
                           </div>
                           <div>
-                            <label className="block text-xs font-bold mb-1 text-blue-700">結果</label>
-                            <select name="result" value={matchForm.result} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full">
+                              <label className="block text-xs font-bold mb-2 text-blue-700">結果</label>
+                              <select name="result" value={matchForm.result} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base">
                               <option value="win">勝ち</option>
                               <option value="draw">引き分け</option>
                               <option value="lose">負け</option>
                             </select>
                           </div>
                           <div>
-                            <label className="block text-xs font-bold mb-1 text-blue-700">ステータス</label>
-                            <select name="status" value={matchForm.status} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full">
+                              <label className="block text-xs font-bold mb-2 text-blue-700">ステータス</label>
+                              <select name="status" value={matchForm.status} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base">
                               <option value="win">勝利</option>
                               <option value="draw">引き分け</option>
                               <option value="lose">敗北</option>
@@ -858,25 +1048,35 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                         </div>
                       </div>
                       {/* 試合データ */}
-                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-futbol mr-1"></i>得点</label>
-                            <input type="text" name="score" value={matchForm.score} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 得点1 アシスト1" />
+                              <label className="block text-xs font-bold mb-2 text-blue-700">
+                                <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                </svg>
+                                得点
+                              </label>
+                              <input type="text" name="score" value={matchForm.score} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required placeholder="例: 得点1 アシスト1" />
                           </div>
                           <div>
-                            <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-clock mr-1"></i>出場時間</label>
-                            <input type="text" name="note" value={matchForm.note} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 40分" />
+                              <label className="block text-xs font-bold mb-2 text-blue-700">
+                                <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                出場時間
+                              </label>
+                              <input type="text" name="note" value={matchForm.note} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" placeholder="例: 40分" />
                           </div>
                         </div>
                       </div>
                       {/* メモ欄 */}
                       <div>
-                        <label className="block text-xs font-bold mb-1 text-blue-700">メモ</label>
-                        <textarea name="note" value={matchForm.note} onChange={handleMatchFormChange} className="border rounded px-3 py-2 w-full" rows={2} placeholder="自由記入 (任意)" />
+                          <label className="block text-xs font-bold mb-2 text-blue-700">メモ</label>
+                          <textarea name="note" value={matchForm.note} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" rows={2} placeholder="自由記入 (任意)" />
                       </div>
-                      <div className="flex justify-end mt-2">
-                        <button type="submit" className="bg-amber-500 text-white px-6 py-2 rounded-lg shadow hover:bg-amber-600 font-bold text-base">
+                        <div className="flex justify-end">
+                          <button type="submit" className="bg-amber-500 text-white px-8 py-3 rounded-2xl font-semibold shadow-lg hover:bg-amber-600 transition-colors text-base">
                           登録
                         </button>
                       </div>
@@ -887,8 +1087,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
           )}
           {selectedTab !== 'practice' && selectedTab !== 'physical' && selectedTab !== 'skill' && selectedTab !== 'match' && (
-            <div className="text-gray-400 text-center py-12">このタブの内容は今後追加予定です</div>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <p className="text-gray-500 text-sm">このタブの内容は今後追加予定です</p>
+              </div>
           )}
+          </div>
         </div>
       </main>
       <BottomTabBar />
@@ -896,27 +1104,29 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
       {/* 追加タイプ選択モーダル */}
       {selectTypeModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
-              onClick={() => setSelectTypeModalOpen(false)}
-              aria-label="閉じる"
-            >
-              ×
-            </button>
-            <h2 className="text-lg font-bold mb-4">追加する情報の種類を選択</h2>
-            <div className="space-y-3">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40">
+          <div className="w-full max-w-md mx-auto rounded-t-3xl bg-white shadow-2xl pb-4 pt-6 px-4 relative animate-slideup">
+            <div className="flex justify-center">
+              <div className="w-12 h-1.5 bg-gray-300 rounded-full mb-4"></div>
+            </div>
+            <h2 className="text-center text-lg font-bold mb-6">追加する情報の種類を選択</h2>
+            <div className="flex flex-col gap-3">
               {['体力測定', 'スキル評価', '練習記録', '試合実績'].map(type => (
                 <button
                   key={type}
-                  className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 rounded"
+                  className="w-full py-4 text-base font-bold rounded-2xl bg-gray-100 active:bg-blue-100 transition-colors shadow-sm"
                   onClick={() => handleSelectType(type as any)}
                 >
                   {type}
                 </button>
               ))}
             </div>
+            <button
+              className="w-full mt-6 py-3 text-base font-bold rounded-2xl bg-white border border-gray-200 text-gray-500 shadow-sm active:bg-gray-100"
+              onClick={() => setSelectTypeModalOpen(false)}
+            >
+              キャンセル
+            </button>
           </div>
         </div>
       )}
@@ -924,26 +1134,31 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 練習記録追加モーダル */}
       {practiceModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
-              onClick={() => { setPracticeModalOpen(false); setAddType(null); }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => { setPracticeModalOpen(false); }}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><i className="fas fa-calendar-plus text-blue-500"></i>練習記録を追加</h2>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">練習記録を追加</h2>
+            </div>
             <form className="space-y-6" onSubmit={handlePracticeSubmit}>
-              {/* 基本情報 */}
-              <div className="bg-blue-50 rounded-lg p-4 mb-2">
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
-                    <input type="date" name="date" value={form.date} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input type="date" name="date" value={form.date} onChange={handleFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
                   </div>
+              <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">種類</label>
-                    <select name="title" value={form.title} onChange={handleFormChange} className="border rounded px-3 py-2 w-full">
+                  <label className="block text-xs font-bold mb-2 text-gray-700">種類</label>
+                  <select name="title" value={form.title} onChange={handleFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base">
                       <option>パス練習</option>
                       <option>シュート練習</option>
                       <option>ミニゲーム</option>
@@ -952,22 +1167,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">時間 <span className='text-gray-400'>(分)</span></label>
-                    <input type="number" name="duration" value={form.duration} onChange={handleFormChange} min={1} max={300} step={1} className="border rounded px-3 py-2 w-full" placeholder="例: 90" required />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">時間 (分)</label>
+                  <input type="number" name="duration" value={form.duration} onChange={handleFormChange} min={1} max={300} step={1} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" placeholder="例: 90" required />
                   </div>
-                  <div></div>
                 </div>
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">内容</label>
+                <textarea name="description" value={form.description} onChange={handleFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" rows={3} placeholder="例: パス練習を中心に30分、ミニゲーム20分" />
               </div>
-              {/* 内容 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-clipboard-list mr-1"></i>内容</label>
-                <textarea name="description" value={form.description} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" rows={3} placeholder="例: パス練習を中心に30分、ミニゲーム20分" />
-              </div>
-              <div className="flex justify-end mt-2">
-                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 font-bold text-base">
+              <button type="submit" className="w-full bg-blue-600 text-white px-6 py-4 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition-colors">
                   登録
                 </button>
-              </div>
             </form>
           </div>
         </div>
@@ -976,81 +1186,84 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* 体力測定追加モーダル */}
       {physicalModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
-              onClick={() => { setPhysicalModalOpen(false); setAddType(null); }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => { setPhysicalModalOpen(false); }}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><i className="fas fa-dumbbell text-blue-500"></i>体力測定データを追加</h2>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">体力測定を追加</h2>
+            </div>
             <form className="space-y-6" onSubmit={handlePhysicalSubmit}>
-              {/* 基本情報 */}
-              <div className="bg-blue-50 rounded-lg p-4 mb-2">
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
-                    <input type="date" name="date" value={physicalForm.date} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input type="date" name="date" value={physicalForm.date} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" required />
                   </div>
-                  <div></div>
+              <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">身長 <span className='text-gray-400'>(cm)</span></label>
-                    <input type="number" name="height" value={physicalForm.height} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" required min="0" placeholder="例: 120" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">身長 (cm)</label>
+                  <input type="number" name="height" value={physicalForm.height} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" required min="0" placeholder="例: 120" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">体重 <span className='text-gray-400'>(kg)</span></label>
-                    <input type="number" name="weight" value={physicalForm.weight} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" required min="0" placeholder="例: 25.5" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">体重 (kg)</label>
+                  <input type="number" name="weight" value={physicalForm.weight} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" required min="0" placeholder="例: 25.5" />
                   </div>
                 </div>
-              </div>
-              {/* 測定項目 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-eye mr-1"></i>視力（左）</label>
-                    <input type="text" name="vision_left" value={physicalForm.vision_left} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 1.2" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">視力（左）</label>
+                  <input type="text" name="vision_left" value={physicalForm.vision_left} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" placeholder="例: 1.2" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-eye mr-1"></i>視力（右）</label>
-                    <input type="text" name="vision_right" value={physicalForm.vision_right} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 1.0" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">視力（右）</label>
+                  <input type="text" name="vision_right" value={physicalForm.vision_right} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" placeholder="例: 1.0" />
+                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">50m走 (秒)</label>
+                  <input type="number" name="run50m" value={physicalForm.run50m} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" min="0" step="0.01" placeholder="例: 9.2" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-running mr-1"></i>50m走 <span className='text-gray-400'>(秒)</span></label>
-                    <input type="number" name="run50m" value={physicalForm.run50m} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" min="0" step="0.01" placeholder="例: 9.2" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">10mダッシュ (秒)</label>
+                  <input type="number" name="dash10m" value={physicalForm.dash10m} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" min="0" step="0.01" placeholder="例: 2.1" />
+                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">シャトルラン (回)</label>
+                  <input type="number" name="shuttle_run" value={physicalForm.shuttle_run} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" min="0" placeholder="例: 30" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-bolt mr-1"></i>10mダッシュ <span className='text-gray-400'>(秒)</span></label>
-                    <input type="number" name="dash10m" value={physicalForm.dash10m} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" min="0" step="0.01" placeholder="例: 2.1" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">立ち幅跳び (cm)</label>
+                  <input type="number" name="jump" value={physicalForm.jump} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" min="0" placeholder="例: 150" />
+                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">上体起こし (回)</label>
+                  <input type="number" name="sit_up" value={physicalForm.sit_up} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" min="0" placeholder="例: 20" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-exchange-alt mr-1"></i>往復走（シャトルラン）<span className='text-gray-400'>(回)</span></label>
-                    <input type="number" name="shuttle_run" value={physicalForm.shuttle_run} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" min="0" placeholder="例: 30" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-shoe-prints mr-1"></i>立ち幅跳び <span className='text-gray-400'>(cm)</span></label>
-                    <input type="number" name="jump" value={physicalForm.jump} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" min="0" placeholder="例: 150" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-child mr-1"></i>上体起こし <span className='text-gray-400'>(回)</span><span className='text-xs text-gray-500 ml-1'>(30秒間で何回できるか)</span></label>
-                    <input type="number" name="sit_up" value={physicalForm.sit_up} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" min="0" placeholder="例: 20" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-arrows-alt-v mr-1"></i>長座体前屈 <span className='text-gray-400'>(cm)</span></label>
-                    <input type="number" name="sit_and_reach" value={physicalForm.sit_and_reach} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" min="0" placeholder="例: 35" />
+                  <label className="block text-xs font-bold mb-2 text-gray-700">長座体前屈 (cm)</label>
+                  <input type="number" name="sit_and_reach" value={physicalForm.sit_and_reach} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" min="0" placeholder="例: 35" />
                   </div>
                 </div>
-              </div>
-              {/* 備考欄 */}
               <div>
-                <label className="block text-xs font-bold mb-1 text-blue-700">備考</label>
-                <textarea name="note" value={physicalForm.note} onChange={handlePhysicalFormChange} className="border rounded px-3 py-2 w-full" rows={2} placeholder="自由記入 (任意)" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">備考</label>
+                <textarea name="note" value={physicalForm.note} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" rows={2} placeholder="自由記入 (任意)" />
               </div>
-              <div className="flex justify-end mt-2">
-                <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 font-bold text-base">
+              <button type="submit" className="w-full bg-green-600 text-white px-6 py-4 rounded-xl font-semibold shadow-lg hover:bg-green-700 transition-colors">
                   登録
                 </button>
-              </div>
             </form>
           </div>
         </div>
@@ -1059,71 +1272,114 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       {/* スキル評価追加モーダル */}
       {skillModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
-              onClick={() => { setSkillModalOpen(false); setAddType(null); }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => { setSkillModalOpen(false); }}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><i className="fas fa-star text-yellow-500"></i>スキル評価を追加</h2>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">スキル評価を追加</h2>
+            </div>
             <form className="space-y-6" onSubmit={handleSkillSubmit}>
-              {/* 基本情報 */}
-              <div className="bg-blue-50 rounded-lg p-4 mb-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
-                    <input type="date" name="date" value={skillForm.date} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" required />
-                  </div>
-                  <div></div>
-                </div>
-              </div>
-              {/* スキル項目 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-futbol mr-1"></i>1分間ドリブル回数</label>
-                    <input type="number" name="dribble_count" value={skillForm.dribble_count} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" min="0" required placeholder="例: 20" />
-                    <span className="text-xs text-gray-400">スピード＋安定性</span>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-futbol mr-1"></i>10本シュート成功数</label>
-                    <input type="number" name="shoot_success" value={skillForm.shoot_success} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" min="0" max="10" required placeholder="例: 7" />
-                    <span className="text-xs text-gray-400">正確さ＋両足も可</span>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-futbol mr-1"></i>10本パス成功数</label>
-                    <input type="number" name="pass_success" value={skillForm.pass_success} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" min="0" max="10" required placeholder="例: 8" />
-                    <span className="text-xs text-gray-400">コントロール力</span>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-shield-alt mr-1"></i>1対1守備成功数</label>
-                    <input type="number" name="defense_success" value={skillForm.defense_success} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" min="0" max="3" required placeholder="例: 2" />
-                    <span className="text-xs text-gray-400">フットワーク力</span>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-brain mr-1"></i>判断テスト正答数</label>
-                    <input type="number" name="decision_correct" value={skillForm.decision_correct} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" min="0" max="5" required placeholder="例: 3" />
-                    <span className="text-xs text-gray-400">認知判断力</span>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-star mr-1"></i>スキル総合点</label>
-                    <input type="number" name="total_score" value={skillForm.total_score} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" min="0" required placeholder="例: 30" />
-                    <span className="text-xs text-gray-400">AI成長予測に使える</span>
-                  </div>
-                </div>
-              </div>
-              {/* コメント欄 */}
               <div>
-                <label className="block text-xs font-bold mb-1 text-blue-700">コメント</label>
-                <textarea name="comment" value={skillForm.comment} onChange={handleSkillFormChange} className="border rounded px-3 py-2 w-full" rows={2} placeholder="自由記入 (任意)" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input type="date" name="date" value={skillForm.date} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" required />
               </div>
-              <div className="flex justify-end mt-2">
-                <button type="submit" className="bg-yellow-500 text-white px-6 py-2 rounded-lg shadow hover:bg-yellow-600 font-bold text-base">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">1分間ドリブル回数</label>
+                  <input type="number" name="dribble_count" value={skillForm.dribble_count} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" min="0" required placeholder="例: 20" />
+                  </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">10本シュート成功数</label>
+                  <input type="number" name="shoot_success" value={skillForm.shoot_success} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" min="0" max="10" required placeholder="例: 7" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">10本パス成功数</label>
+                  <input type="number" name="pass_success" value={skillForm.pass_success} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" min="0" max="10" required placeholder="例: 8" />
+              </div>
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">1対1守備成功数</label>
+                  <input type="number" name="defense_success" value={skillForm.defense_success} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" min="0" max="3" required placeholder="例: 2" />
+                  </div>
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">判断テスト正答数</label>
+                  <input type="number" name="decision_correct" value={skillForm.decision_correct} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" min="0" max="5" required placeholder="例: 3" />
+                  </div>
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">スキル総合点</label>
+                  <input type="number" name="total_score" value={skillForm.total_score} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" min="0" required placeholder="例: 30" />
+                </div>
+                  </div>
+                  <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">コメント</label>
+                <textarea name="comment" value={skillForm.comment} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" rows={2} placeholder="自由記入 (任意)" />
+                  </div>
+              <button type="submit" className="w-full bg-yellow-600 text-white px-6 py-4 rounded-xl font-semibold shadow-lg hover:bg-yellow-700 transition-colors">
+                登録
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 試合実績追加モーダル */}
+      {matchModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
+              onClick={() => { setMatchModalOpen(false); }}
+              aria-label="閉じる"
+            >
+              ×
+            </button>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">試合実績を追加</h2>
+            </div>
+            <form className="space-y-6" onSubmit={handleMatchSubmit}>
+                  <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input type="date" name="date" value={matchForm.date} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base" required />
+                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">対戦相手</label>
+                  <input type="text" name="opponent" value={matchForm.opponent} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base" required placeholder="例: FC青葉" />
+                  </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">結果</label>
+                  <select name="result" value={matchForm.result} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base">
+                    <option value="win">勝ち</option>
+                    <option value="draw">引き分け</option>
+                    <option value="lose">負け</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">得点</label>
+                <input type="text" name="score" value={matchForm.score} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base" required placeholder="例: 得点1 アシスト1" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">出場時間・メモ</label>
+                <textarea name="note" value={matchForm.note} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base" rows={2} placeholder="例: 40分" />
+              </div>
+              <button type="submit" className="w-full bg-amber-600 text-white px-6 py-4 rounded-xl font-semibold shadow-lg hover:bg-amber-700 transition-colors">
                   登録
                 </button>
-              </div>
             </form>
           </div>
         </div>

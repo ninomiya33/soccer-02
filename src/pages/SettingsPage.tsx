@@ -145,50 +145,65 @@ const SettingsPage: React.FC = () => {
       {/* プロフィール編集モーダル */}
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
               onClick={() => setEditModalOpen(false)}
               aria-label="閉じる"
             >×</button>
-            <h2 className="text-lg font-bold mb-4">プロフィール編集</h2>
-            <form className="space-y-4" onSubmit={handleEditSave}>
-              <div>
-                <label className="block text-sm font-medium mb-1">名前</label>
-                <input type="text" name="name" value={editForm.name} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">メールアドレス</label>
-                <input type="email" name="email" value={editForm.email} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">画像URL</label>
-                <input type="text" name="avatar_url" value={editForm.avatar_url} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full mb-2" />
-                <input type="file" name="imageFile" accept="image/*" onChange={handleEditFormChange} className="mb-2" />
-                {editImagePreview && (
-                  <img src={editImagePreview} alt="preview" className="w-20 h-20 rounded-full mx-auto border mb-2" />
+            <div className="flex flex-col items-center mb-6">
+              <div className="w-24 h-24 rounded-full bg-gray-100 border-4 border-white shadow mb-2 overflow-hidden flex items-center justify-center">
+                {editImagePreview || editForm.avatar_url ? (
+                  <img src={editImagePreview || editForm.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <i className="fas fa-user text-4xl text-gray-300"></i>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">年齢</label>
-                <input type="number" name="age" value={editForm.age ?? ''} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" min="0" />
+              <label className="text-xs text-blue-500 cursor-pointer mb-2 hover:underline">
+                写真を変更
+                <input type="file" name="imageFile" accept="image/*" onChange={handleEditFormChange} className="hidden" />
+              </label>
+            </div>
+            <form className="space-y-4" onSubmit={handleEditSave}>
+              <div className="bg-gray-50 rounded-xl shadow p-3">
+                <label className="block text-xs font-bold mb-1 text-gray-700">名前</label>
+                <input type="text" name="name" value={editForm.name} onChange={handleEditFormChange} className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">学年</label>
-                <input type="text" name="grade" value={editForm.grade} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" />
+              <div className="bg-gray-50 rounded-xl shadow p-3">
+                <label className="block text-xs font-bold mb-1 text-gray-700">メールアドレス</label>
+                <input type="email" name="email" value={editForm.email} onChange={handleEditFormChange} className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">性別</label>
-                <select name="gender" value={editForm.gender} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full">
+              <div className="bg-gray-50 rounded-xl shadow p-3">
+                <label className="block text-xs font-bold mb-1 text-gray-700">年齢</label>
+                <input type="number" name="age" value={editForm.age ?? ''} onChange={handleEditFormChange} className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 bg-white text-base" min="0" />
+              </div>
+              <div className="bg-gray-50 rounded-xl shadow p-3">
+                <label className="block text-xs font-bold mb-1 text-gray-700">学年</label>
+                <input type="text" name="grade" value={editForm.grade} onChange={handleEditFormChange} className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 bg-white text-base" />
+              </div>
+              <div className="bg-gray-50 rounded-xl shadow p-3">
+                <label className="block text-xs font-bold mb-1 text-gray-700">性別</label>
+                <select name="gender" value={editForm.gender} onChange={handleEditFormChange} className="w-full px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-blue-500 bg-white text-base">
                   <option value="">選択してください</option>
                   <option value="男子">男子</option>
                   <option value="女子">女子</option>
                 </select>
               </div>
-              <div className="flex justify-end">
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">保存</button>
+              <div className="flex gap-2 mt-6">
+                <button type="button" className="flex-1 bg-gray-100 text-gray-500 px-4 py-3 rounded-xl font-semibold shadow hover:bg-gray-200" onClick={() => setEditModalOpen(false)}>
+                  キャンセル
+                </button>
+                <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl font-semibold shadow hover:bg-blue-700">
+                  保存
+                </button>
               </div>
             </form>
+            <button
+              className="w-full mt-6 py-3 text-base font-bold rounded-xl bg-red-50 text-red-500 border border-red-100 shadow hover:bg-red-100 transition-colors"
+              onClick={signOut}
+            >
+              ログアウト
+            </button>
           </div>
         </div>
       )}

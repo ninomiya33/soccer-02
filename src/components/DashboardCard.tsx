@@ -57,57 +57,53 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ physicalLogs, skillLogs, 
   }, 0);
 
   return (
-    <div className="grid grid-cols-2 gap-3 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
       {/* 体力測定カード */}
-      <div className="bg-white shadow-sm hover:shadow-md transition-shadow rounded-lg p-3">
-        <div className="flex items-center mb-2">
-          <i className="fas fa-heartbeat text-red-500 mr-2"></i>
-          <h3 className="text-sm font-medium">体力測定</h3>
+      <div className="bg-white rounded-3xl shadow-xl p-6 flex flex-col gap-2 transition-transform active:scale-95 cursor-pointer hover:shadow-2xl">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-red-50">
+            <i className="fas fa-heartbeat text-2xl text-red-500"></i>
         </div>
-        <div className="text-2xl font-bold">{latestPhysical ? latestPhysical.height : '--'}<span className="text-sm text-gray-500">cm</span></div>
-        <div className="flex items-center text-xs text-green-600 mt-1">
-          <i className="fas fa-arrow-up mr-1"></i>
-          <span>最新測定日: {latestPhysical ? latestPhysical.date : '--'}</span>
+          <h3 className="text-base font-bold text-gray-800">体力測定</h3>
         </div>
+        <div className="text-4xl font-extrabold text-gray-900 mb-1">{latestPhysical ? latestPhysical.height : '--'}<span className="text-lg text-gray-400 font-medium">cm</span></div>
+        <div className="text-xs text-green-600 flex items-center gap-1"><i className="fas fa-arrow-up"></i>最新測定日: {latestPhysical ? latestPhysical.date : '--'}</div>
       </div>
 
       {/* スキル評価カード */}
-      <div className="bg-white shadow-sm hover:shadow-md transition-shadow rounded-lg p-3">
-        <div className="flex items-center mb-2">
-          <i className="fas fa-star text-yellow-500 mr-2"></i>
-          <h3 className="text-sm font-medium">スキル評価</h3>
+      <div className="bg-white rounded-3xl shadow-xl p-6 flex flex-col gap-2 transition-transform active:scale-95 cursor-pointer hover:shadow-2xl">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-yellow-50">
+            <i className="fas fa-star text-2xl text-yellow-500"></i>
         </div>
-        <div className="text-2xl font-bold">{skillTotal}<span className="text-sm text-gray-500">点</span></div>
-        <div className="flex items-center text-xs text-green-600 mt-1">
-          <i className="fas fa-arrow-up mr-1"></i>
-          <span>最新評価日: {latestSkill ? latestSkill.date : '--'}</span>
+          <h3 className="text-base font-bold text-gray-800">スキル評価</h3>
         </div>
+        <div className="text-4xl font-extrabold text-gray-900 mb-1">{skillTotal}<span className="text-lg text-gray-400 font-medium">点</span></div>
+        <div className="text-xs text-green-600 flex items-center gap-1"><i className="fas fa-arrow-up"></i>最新評価日: {latestSkill ? latestSkill.date : '--'}</div>
       </div>
 
       {/* 練習記録カード */}
-      <div className="bg-white shadow-sm hover:shadow-md transition-shadow rounded-lg p-3">
-        <div className="flex items-center mb-2">
-          <i className="fas fa-calendar-check text-blue-500 mr-2"></i>
-          <h3 className="text-sm font-medium">練習記録</h3>
+      <div className="bg-white rounded-3xl shadow-xl p-6 flex flex-col gap-2 transition-transform active:scale-95 cursor-pointer hover:shadow-2xl">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-blue-50">
+            <i className="fas fa-calendar-check text-2xl text-blue-500"></i>
         </div>
-        <div className="text-2xl font-bold">{totalPracticeHours}<span className="text-sm text-gray-500">時間</span></div>
-        <div className="flex items-center text-xs text-blue-600 mt-1">
-          <i className="fas fa-clock mr-1"></i>
-          <span>記録数 {practiceLogs.length}件</span>
+          <h3 className="text-base font-bold text-gray-800">練習記録</h3>
         </div>
+        <div className="text-4xl font-extrabold text-gray-900 mb-1">{totalPracticeHours}<span className="text-lg text-gray-400 font-medium">時間</span></div>
+        <div className="text-xs text-blue-600 flex items-center gap-1"><i className="fas fa-clock"></i>記録数 {practiceLogs.length}件</div>
       </div>
 
       {/* 試合実績カード */}
-      <div className="bg-white shadow-sm hover:shadow-md transition-shadow rounded-lg p-3">
-        <div className="flex items-center mb-2">
-          <i className="fas fa-trophy text-amber-500 mr-2"></i>
-          <h3 className="text-sm font-medium">試合実績</h3>
+      <div className="bg-white rounded-3xl shadow-xl p-6 flex flex-col gap-2 transition-transform active:scale-95 cursor-pointer hover:shadow-2xl">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-amber-50">
+            <i className="fas fa-trophy text-2xl text-amber-500"></i>
         </div>
-        <div className="text-2xl font-bold">{totalGoals}<span className="text-sm text-gray-500">得点</span></div>
-        <div className="flex items-center text-xs text-blue-600 mt-1">
-          <i className="fas fa-futbol mr-1"></i>
-          <span>アシスト {totalAssists}回</span>
+          <h3 className="text-base font-bold text-gray-800">試合実績</h3>
         </div>
+        <div className="text-4xl font-extrabold text-gray-900 mb-1">{totalGoals}<span className="text-lg text-gray-400 font-medium">得点</span></div>
+        <div className="text-xs text-blue-600 flex items-center gap-1"><i className="fas fa-futbol"></i>アシスト {totalAssists}回</div>
       </div>
     </div>
   );

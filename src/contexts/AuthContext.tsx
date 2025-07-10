@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../config/supabase.js'
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 interface AuthContextType {
   user: User | null
@@ -68,10 +70,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    if (!Capacitor.isNativePlatform()) {
+      // Webの場合は何もしない or エラーを返す
+      return { error: { message: 'ネイティブアプリでのみGoogleログインが利用可能です' } };
+    }
+    try {
+      // ネイティブGoogleログイン
+      const googleUser: any = await GoogleAuth.signIn();
+      const idToken = googleUser.idToken;
+
+      // SupabaseにIDトークンでサインイン
+      const { data, error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
-    })
-    return { error }
+        token: idToken,
+      });
+
+      return { error };
+    } catch (error) {
+      return { error };
+    }
   }
 
   const value = {

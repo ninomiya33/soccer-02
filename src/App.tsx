@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext.js';
 import LoginPage from './pages/LoginPage.js';
-import PlayersPage from './pages/PlayersPage.js';
+
 import DashboardPage from './pages/DashboardPage.js';
 import AnalyticsPage from './pages/AnalyticsPage.js';
 import SchedulePage from './pages/SchedulePage.js';
@@ -18,25 +18,8 @@ const Placeholder: React.FC<{ title: string }> = ({ title }) => (
   <div className="pt-32 text-center text-2xl text-gray-400 min-h-screen">{title}ページは準備中です</div>
 );
 
-// 認証が必要なルートを保護するコンポーネント
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
-
+// ProtectedRouteの定義と利用を削除し、全ページをそのまま表示するように修正
+// <Route path="/login" ... /> も削除
 const AppRoutes: React.FC = () => {
   // ダッシュボードと同じログデータをここで管理
   const [physicalLogs, setPhysicalLogs] = useState<{
@@ -110,9 +93,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={
-        <ProtectedRoute>
           <DashboardPage
             physicalLogs={physicalLogs}
             setPhysicalLogs={setPhysicalLogs}
@@ -123,47 +104,30 @@ const AppRoutes: React.FC = () => {
             practiceLogs={practiceLogs}
             setPracticeLogs={setPracticeLogs}
           />
-        </ProtectedRoute>
       } />
-      <Route path="/players" element={
-        <ProtectedRoute>
-          <PlayersPage />
-        </ProtectedRoute>
-      } />
+
       <Route path="/players/:id" element={
-        <ProtectedRoute>
           <PlayerDetailPage />
-        </ProtectedRoute>
       } />
       <Route path="/analytics" element={
-        <ProtectedRoute>
           <AnalyticsPage
             physicalLogs={physicalLogs}
             skillLogs={skillLogs}
             matchLogs={matchLogs}
             practiceLogs={practiceLogs}
           />
-        </ProtectedRoute>
       } />
       <Route path="/schedule" element={
-        <ProtectedRoute>
           <SchedulePage />
-        </ProtectedRoute>
       } />
       <Route path="/videos" element={
-        <ProtectedRoute>
           <VideosPage />
-        </ProtectedRoute>
       } />
       <Route path="/settings" element={
-        <ProtectedRoute>
           <SettingsPage />
-        </ProtectedRoute>
       } />
       <Route path="/notifications" element={
-        <ProtectedRoute>
           <NotificationsPage />
-        </ProtectedRoute>
       } />
     </Routes>
   );

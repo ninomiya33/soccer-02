@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import BottomTabBar from '../components/BottomTabBar.js';
 import { useAuth } from '../contexts/AuthContext.js';
 import { videoService, Video } from '../services/videoService.js';
-import { useRef } from 'react';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const categories = [
   { key: 'all', label: 'すべて' },
@@ -101,6 +101,9 @@ const VideosPage: React.FC = () => {
   const toggleFolder = (folder: string) => {
     setOpenFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
   };
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     videoService.getVideos().then(setVideos).catch(console.error);
@@ -157,8 +160,10 @@ const VideosPage: React.FC = () => {
     if (name === 'file') {
       const file = files[0];
       setForm({ ...form, file });
-      // duration自動取得
+      setUploadError(null);
+      // プレビュー用URL生成
       if (file) {
+        setVideoPreviewUrl(URL.createObjectURL(file));
         const video = document.createElement('video');
         video.preload = 'metadata';
         video.src = URL.createObjectURL(file);
@@ -168,6 +173,8 @@ const VideosPage: React.FC = () => {
           const sec = Math.round(dur % 60).toString().padStart(2, '0');
           setForm(f => ({ ...f, duration: `${min}:${sec}` }));
         };
+      } else {
+        setVideoPreviewUrl(null);
       }
     } else {
       setForm({ ...form, [name]: value });
@@ -178,6 +185,7 @@ const VideosPage: React.FC = () => {
     e.preventDefault();
     if (!form.title || !form.category || (!form.file && !form.videoUrl) || !user) return;
     setUploading(true);
+    setUploadError(null);
     let url = form.videoUrl;
     let thumbnail = '';
     let duration = form.duration;
@@ -195,13 +203,15 @@ const VideosPage: React.FC = () => {
         uploaded_by: user.id,
         thumbnail,
         duration,
-        date: form.date ? new Date(form.date).toISOString() : undefined, // ← 修正
+        date: form.date ? new Date(form.date).toISOString() : undefined,
       };
       const saved = await videoService.addVideo(newVideo);
       setVideos([saved, ...videos]);
       setAddModalOpen(false);
       setForm({ title: '', date: '', category: 'match', videoUrl: '', duration: '', uploadType: 'file', file: null, thumbnail: '' });
+      setVideoPreviewUrl(null);
     } catch (err) {
+      setUploadError('動画の登録に失敗しました');
       alert('動画の登録に失敗しました');
       console.error(err);
     } finally {
@@ -218,6 +228,19 @@ const VideosPage: React.FC = () => {
     return '/default_video_thumb.png';
   };
 
+  const handleCameraVideo = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute('capture', 'environment');
+      fileInputRef.current.click();
+    }
+  };
+  const handlePickVideo = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.removeAttribute('capture');
+      fileInputRef.current.click();
+    }
+  };
+
   const handleEditVideo = (video: Video) => {
     setEditForm(video);
     setEditModalOpen(true);
@@ -231,48 +254,66 @@ const VideosPage: React.FC = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-16">
-      {/* タイトルバー */}
-      <header className="bg-blue-600 text-white p-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <button className="text-2xl"><i className="fas fa-arrow-left"></i></button>
-          <span className="text-lg font-bold">動画ライブラリー</span>
+      {/* iOS風ヘッダー */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50">
+        <div className="pt-12 pb-4 px-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">動画ライブラリー</h1>
+              <p className="text-sm text-gray-500 mt-1">練習・試合の動画管理</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+              <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button><i className="fas fa-search text-xl"></i></button>
-          <button><i className="fas fa-ellipsis-v text-xl"></i></button>
         </div>
-      </header>
-      {/* 上部UIを美しくリファクタ */}
-      <div className="sticky top-0 z-20 bg-white shadow-sm rounded-b-xl px-3 py-2 flex flex-col gap-2">
-        <div className="flex gap-2 items-center">
+
+      <main className="pt-32 px-6 pb-16">
+        {/* iOS風検索・ソート */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mb-6">
+          <div className="flex gap-3 mb-4">
           <div className="relative flex-1">
-            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+              <svg className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="動画検索"
-              className="pl-10 pr-3 py-2 rounded-full border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 w-full"
+                placeholder="動画を検索"
+                className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none bg-gray-50 text-base"
             />
           </div>
           <select
             value={sort}
             onChange={e => setSort(e.target.value as any)}
-            className="rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-bold"
+              className="px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-gray-50 text-base font-semibold"
           >
             <option value="new">新着順</option>
             <option value="old">古い順</option>
             <option value="views">再生回数順</option>
           </select>
         </div>
+
+          {/* iOS風カテゴリタブ */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {categories.map(cat => (
             <button
               key={cat.key}
-              className={`px-4 py-1 rounded-full font-bold border transition ${
+                className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all duration-200 whitespace-nowrap ${
                 activeCategory === cat.key
-                  ? 'bg-blue-600 text-white border-blue-600 shadow'
-                  : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-blue-100'
+                    ? 'bg-blue-500 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
               onClick={() => setActiveCategory(cat.key)}
             >
@@ -280,212 +321,408 @@ const VideosPage: React.FC = () => {
             </button>
           ))}
         </div>
+
+          {/* 選択中のアクション */}
         {selectedIds.length > 0 && (
-          <div className="flex gap-2 items-center mt-2">
-            <button className="bg-yellow-500 text-white px-4 py-1 rounded font-bold shadow hover:bg-yellow-600" onClick={() => setFolderModalOpen(true)}>
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+              <button 
+                className="bg-yellow-500 text-white px-4 py-2 rounded-xl font-semibold text-sm shadow-lg hover:bg-yellow-600 transition-colors flex items-center gap-2" 
+                onClick={() => setFolderModalOpen(true)}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                </svg>
               フォルダ作成/移動
             </button>
-            <span className="text-sm text-gray-600">{selectedIds.length}件選択中</span>
-            <button className="text-xs text-gray-400 underline" onClick={clearSelection}>選択解除</button>
-          </div>
-        )}
-      </div>
-      {/* フォルダ名入力モーダル */}
-      {folderModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
-            <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700" onClick={() => setFolderModalOpen(false)} aria-label="閉じる">×</button>
-            <h2 className="text-lg font-bold mb-4">フォルダ名を入力</h2>
-            <input ref={folderInputRef} type="text" className="border rounded px-3 py-2 w-full mb-4" placeholder="例: 2024夏合宿" />
-            <button className="bg-yellow-500 text-white px-4 py-2 rounded w-full font-bold hover:bg-yellow-600" onClick={handleCreateFolder}>決定</button>
-          </div>
+              <span className="text-sm text-gray-600 font-semibold">{selectedIds.length}件選択中</span>
+              <button 
+                className="text-sm text-gray-400 underline" 
+                onClick={clearSelection}
+              >
+                選択解除
+              </button>
+            </div>
+          )}
         </div>
-      )}
-      {/* 動画リスト */}
-      <main className="px-2 pt-2 pb-20 max-w-xl mx-auto">
-        {Object.entries(groupedByFolder).map(([folder, videos]) => (
-          <div key={folder} className="mb-8">
-            <button
-              className="flex items-center gap-2 mb-2 w-full text-left px-2 py-2 bg-yellow-100 hover:bg-yellow-200 rounded font-bold text-lg border border-yellow-200 shadow focus:outline-none"
-              onClick={() => toggleFolder(folder)}
+
+        {/* iOS風動画グリッド */}
+        <div className="grid grid-cols-2 gap-4">
+          {filteredVideos.map(video => (
+            <div
+              key={video.id}
+              className="bg-white rounded-2xl shadow-lg overflow-hidden relative group cursor-pointer"
+              onClick={() => window.open(video.url, '_blank')}
+              onContextMenu={e => {
+                e.preventDefault();
+                if (window.confirm('編集しますか？（キャンセルで削除）')) {
+                  handleEditVideo(video);
+                } else {
+                  if (video.id !== undefined) handleDeleteVideo(video.id);
+                }
+              }}
             >
-              <span className="text-2xl"><i className="fas fa-folder" /></span>
-              <span className="flex-1">{folder}（{videos.length}件）</span>
-              <span className="text-xl">{openFolders[folder] ? '▲' : '▼'}</span>
-            </button>
-            <div className={`transition-all duration-300 ${openFolders[folder] ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
-              <div className="space-y-4 pl-6">
-                {videos.map(video => (
-                  <div key={video.id} className={`flex items-center gap-3 p-2 rounded-lg shadow bg-white border ${selectedIds.includes(video.id!) ? 'ring-2 ring-yellow-400' : ''}`}>
-                    <input type="checkbox" checked={selectedIds.includes(video.id!)} onChange={() => toggleSelect(video.id!)} className="accent-yellow-500 w-5 h-5" />
-                    <span className="text-xl text-yellow-500"><i className="fas fa-file-video" /></span>
-                    <div className="relative w-28 h-16 flex-shrink-0">
-                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover rounded" />
-                      <a href={video.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex items-center justify-center">
-                        <span className="bg-black/60 rounded-full p-2"><i className="fas fa-play text-white text-lg"></i></span>
-                      </a>
-                      <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs rounded px-1 py-0.5">{video.views ?? 0}回</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-base mb-1 flex items-center">{video.title}</div>
-                      <div className="text-xs text-gray-500 mb-1">{video.date ? new Date(video.date).toLocaleString('ja-JP') : ''}</div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={
-                            `px-2 py-0.5 rounded text-xs font-bold ` +
-                            (video.type === 'match'
-                              ? 'bg-blue-100 text-blue-600'
-                              : video.type === 'practice'
-                              ? 'bg-green-100 text-green-600'
-                              : 'bg-amber-100 text-amber-600')
-                          }
-                        >
-                          {video.type === 'match' ? '試合映像' : video.type === 'practice' ? '練習映像' : '技術分析'}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <button className="text-xs text-blue-600 underline" onClick={() => handleEditVideo(video)}>編集</button>
-                        <button className="text-xs text-red-600 underline" onClick={() => { if (video.id !== undefined) handleDeleteVideo(video.id); }}>削除</button>
-                      </div>
-                    </div>
+              {/* サムネイル */}
+              <div className="relative w-full aspect-video bg-gray-200">
+                <img 
+                  src={video.thumbnail} 
+                  alt={video.title} 
+                  className="w-full h-full object-cover" 
+                />
+                
+                {/* オーバーレイ情報 */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent">
+                  <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs rounded-lg px-2 py-1 font-semibold">
+                    {video.duration || ''}
                   </div>
-                ))}
+                  <div className="absolute top-2 left-2 bg-black/60 text-white text-xs rounded-lg px-2 py-1">
+                    {video.views ?? 0}回
+                  </div>
+                  <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs rounded-lg px-2 py-1 font-semibold">
+                    {categories.find(c => c.key === video.type)?.label || ''}
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-white/90 text-gray-800 text-xs rounded-lg px-2 py-1 font-semibold">
+                    {video.date ? new Date(video.date).toLocaleDateString('ja-JP') : ''}
+                  </div>
+                </div>
+
+                {/* 選択チェックボックス */}
+                <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(video.id!)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(video.id!);
+                    }}
+                    className="w-5 h-5 rounded border-2 border-white bg-white/80"
+                  />
+                </div>
+              </div>
+
+              {/* タイトル */}
+              <div className="p-3">
+                <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2">
+                  {video.title}
+                </h3>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* 空状態 */}
         {filteredVideos.length === 0 && (
-          <div className="text-center text-gray-400 py-12">動画がありません</div>
+          <div className="text-center py-16">
+            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-gray-500 text-sm">動画がありません</p>
+          </div>
         )}
       </main>
-      {/* 追加ボタン */}
-      <button className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-blue-600 text-white text-3xl shadow-lg flex items-center justify-center z-50 hover:bg-blue-700" onClick={() => setAddModalOpen(true)}>
-        <i className="fas fa-plus"></i>
+
+      {/* iOS風フォルダ作成モーダル */}
+      {folderModalOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl" 
+              onClick={() => setFolderModalOpen(false)} 
+              aria-label="閉じる"
+            >
+              ×
+            </button>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">フォルダを作成</h2>
+              <p className="text-gray-500 text-sm">選択した動画を新しいフォルダに移動します</p>
+            </div>
+            <input 
+              ref={folderInputRef} 
+              type="text" 
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base mb-6" 
+              placeholder="例: 2024夏合宿" 
+            />
+            <button 
+              className="w-full bg-yellow-500 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:bg-yellow-600 transition-colors" 
+              onClick={handleCreateFolder}
+            >
+              フォルダを作成
+            </button>
+          </div>
+        </div>
+        )}
+
+      {/* iOS風FAB */}
+      <button 
+        className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center z-50 hover:bg-blue-700 transition-colors" 
+        onClick={() => setAddModalOpen(true)}
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
       </button>
-      {/* 追加モーダル */}
+
+      {/* iOS風追加モーダル */}
       {addModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl z-10"
               onClick={() => setAddModalOpen(false)}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-lg font-bold mb-4">動画を追加</h2>
-            <form className="space-y-4" onSubmit={handleAddVideo}>
-              <div>
-                <label className="block text-sm font-medium mb-1">タイトル</label>
-                <input type="text" name="title" value={form.title} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+            
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
               </div>
+              <h2 className="text-xl font-bold text-gray-900">動画を追加</h2>
+            </div>
+
+            <form className="space-y-6" onSubmit={handleAddVideo}>
+              {/* タイトル入力 */}
               <div>
-                <label className="block text-sm font-medium mb-1">日付</label>
-                <input type="datetime-local" name="date" value={form.date} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">タイトル</label>
+                <input
+                  type="text"
+                  name="title"
+                  value={form.title}
+                  onChange={handleFormChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                  placeholder="動画のタイトルを入力"
+                  required
+                />
               </div>
+
+              {/* カテゴリ選択 */}
               <div>
-                <label className="block text-sm font-medium mb-1">カテゴリ</label>
-                <select name="category" value={form.category} onChange={handleFormChange} className="border rounded px-3 py-2 w-full">
+                <label className="block text-xs font-bold mb-2 text-gray-700">カテゴリ</label>
+                <select
+                  name="category"
+                  value={form.category}
+                  onChange={handleFormChange}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                >
                   {categories.filter(c => c.key !== 'all').map(cat => (
                     <option key={cat.key} value={cat.key}>{cat.label}</option>
                   ))}
                 </select>
               </div>
+
+              {/* 動画ファイル選択 */}
               <div>
-                <label className="block text-sm font-medium mb-1">サムネイル画像URL</label>
-                <input type="text" name="thumbnail" value={form.thumbnail} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
-              </div>
-              {form.uploadType === 'link' && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">動画URL</label>
-                  <input type="text" name="videoUrl" value={form.videoUrl} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">動画ファイル</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  name="file"
+                  accept="video/*"
+                  onChange={handleFormChange}
+                  className="hidden"
+                />
+                <div className="space-y-3">
+                  <button 
+                    type="button" 
+                    className="w-full bg-blue-500 text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3 shadow-lg hover:bg-blue-600 transition-colors" 
+                    onClick={handleCameraVideo}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    カメラで撮影
+                  </button>
+                  <button 
+                    type="button" 
+                    className="w-full bg-green-500 text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3 shadow-lg hover:bg-green-600 transition-colors" 
+                    onClick={handlePickVideo}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    動画を選択
+                  </button>
                 </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium mb-1">再生時間</label>
-                <input type="text" name="duration" value={form.duration} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 12:35" />
+                
+                {/* 選択されたファイルのプレビュー */}
+                {form.file && (
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-3 mt-4">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-semibold text-gray-700">{form.file.name}</span>
+                    </div>
+                    {videoPreviewUrl && (
+                      <video 
+                        src={videoPreviewUrl} 
+                        controls 
+                        className="w-full rounded-xl shadow-sm border" 
+                        style={{ maxHeight: '200px' }}
+                      />
+                    )}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">アップロードタイプ</label>
-                <select name="uploadType" value={form.uploadType} onChange={handleFormChange} className="border rounded px-3 py-2 w-full">
-                  <option value="file">ファイルアップロード</option>
-                  <option value="link">外部リンク</option>
-                </select>
-              </div>
-              <div>
-                {form.uploadType === 'file' && (
-                  <label className="block text-sm font-medium mb-1">動画ファイル</label>
                 )}
-                {form.uploadType === 'file' && (
-                  <input type="file" name="file" accept="video/*" onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
+                
+                {uploadError && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {uploadError}
+              </div>
+                )}
+                
+                {uploading && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-blue-600 text-sm flex items-center gap-2">
+                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    アップロード中...
+                  </div>
                 )}
               </div>
-              <div className="flex justify-end">
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                  登録
+
+              {/* 登録ボタン */}
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 text-white px-6 py-4 rounded-xl font-semibold text-base shadow-lg hover:bg-blue-700 transition-colors"
+                disabled={uploading}
+              >
+                {uploading ? 'アップロード中...' : '登録'}
                 </button>
-              </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* iOS風編集モーダル */}
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
               onClick={() => setEditModalOpen(false)}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-lg font-bold mb-4">動画を編集</h2>
-            <form className="space-y-4" onSubmit={handleAddVideo}>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">動画を編集</h2>
+            </div>
+            <form className="space-y-6" onSubmit={handleAddVideo}>
               <div>
-                <label className="block text-sm font-medium mb-1">タイトル</label>
-                <input type="text" name="title" value={editForm?.title} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">タイトル</label>
+                <input 
+                  type="text" 
+                  name="title" 
+                  value={editForm?.title} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  required 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">日付</label>
-                <input type="datetime-local" name="date" value={editForm?.date} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input 
+                  type="datetime-local" 
+                  name="date" 
+                  value={editForm?.date} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  required 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">カテゴリ</label>
-                <select name="category" value={editForm?.type} onChange={handleFormChange} className="border rounded px-3 py-2 w-full">
+                <label className="block text-xs font-bold mb-2 text-gray-700">カテゴリ</label>
+                <select 
+                  name="category" 
+                  value={editForm?.type} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                >
                   {categories.filter(c => c.key !== 'all').map(cat => (
                     <option key={cat.key} value={cat.key}>{cat.label}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">サムネイル画像URL</label>
-                <input type="text" name="thumbnail" value={editForm?.thumbnail} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">サムネイル画像URL</label>
+                <input 
+                  type="text" 
+                  name="thumbnail" 
+                  value={editForm?.thumbnail} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">動画URL</label>
-                <input type="text" name="videoUrl" value={editForm?.url} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">動画URL</label>
+                <input 
+                  type="text" 
+                  name="videoUrl" 
+                  value={editForm?.url} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  required 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">再生時間</label>
-                <input type="text" name="duration" value={editForm?.duration} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 12:35" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">再生時間</label>
+                <input 
+                  type="text" 
+                  name="duration" 
+                  value={editForm?.duration} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  placeholder="例: 12:35" 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">アップロードタイプ</label>
-                <select name="uploadType" value={editForm?.uploadType} onChange={handleFormChange} className="border rounded px-3 py-2 w-full">
+                <label className="block text-xs font-bold mb-2 text-gray-700">アップロードタイプ</label>
+                <select 
+                  name="uploadType" 
+                  value={editForm?.uploadType} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                >
                   <option value="file">ファイルアップロード</option>
                   <option value="link">外部リンク</option>
                 </select>
               </div>
+              {editForm?.uploadType === 'file' && (
               <div>
-                {editForm?.uploadType === 'file' && (
-                  <label className="block text-sm font-medium mb-1">動画ファイル</label>
-                )}
-                {editForm?.uploadType === 'file' && (
-                  <input type="file" name="file" accept="video/*" onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
-                )}
+                  <label className="block text-xs font-bold mb-2 text-gray-700">動画ファイル</label>
+                  <input 
+                    type="file" 
+                    name="file" 
+                    accept="video/*" 
+                    onChange={handleFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  />
               </div>
+              )}
               <div className="flex justify-end">
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button 
+                  type="submit" 
+                  className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 transition-colors"
+                >
                   更新
                 </button>
               </div>
@@ -493,6 +730,7 @@ const VideosPage: React.FC = () => {
           </div>
         </div>
       )}
+
       <BottomTabBar />
     </div>
   );

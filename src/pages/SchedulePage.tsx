@@ -199,69 +199,70 @@ const SchedulePage: React.FC = () => {
   if (!isLoaded) return <div>地図を読み込み中...</div>;
 
   return (
-    <div className="bg-gray-50 min-h-screen pb-16 flex flex-col md:flex-row">
-      {/* 予定一覧ボタン（PC:右中央, スマホ:右上） */}
-      <button
-        className="fixed z-40 bg-blue-600 text-white px-3 py-2 rounded-l-lg shadow-md md:top-1/2 md:right-0 md:rounded-l-lg md:translate-y-[-50%] top-4 right-4 md:bottom-auto md:block md:top-1/2 md:right-0 md:translate-y-[-50%] md:rounded-l-lg"
-        onClick={() => setSidebarOpen(true)}
-      >
-        <i className="fas fa-list mr-1"></i>予定一覧
-      </button>
-      {/* サイドバー（スライドイン, PC/スマホ共通） */}
-      <div
-        className={`fixed top-0 right-0 h-full w-72 bg-white border-l shadow-lg z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:w-72 w-11/12 max-w-xs`}
-      >
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="閉じる"
-        >×</button>
-        <div className="pt-12 pb-4 px-4">
-          <h2 className="text-base font-bold mb-2">今後の予定一覧</h2>
-          <div className="space-y-2">
-            {events
-              .filter(e => e.date >= todayStr)
-              .sort((a, b) => a.date.localeCompare(b.date))
-              .map((event, i) => (
-                <div key={i} className="flex items-center bg-gray-50 rounded shadow p-2 border">
-                  <span className={`px-2 py-1 rounded text-xs font-bold mr-2 ${getTypeOption(event.type).color}`}>{event.type}</span>
-                  <span className="font-bold mr-2">{event.title}</span>
-                  <span className="text-xs text-gray-500 mr-2">{new Date(event.date).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</span>
-                  <button className="text-xs text-blue-500 underline ml-auto mr-1" onClick={() => handleEdit(i)}>編集</button>
-                  <button className="text-xs text-red-500 underline" onClick={() => handleDelete(i)}>削除</button>
-                </div>
-              ))}
-            {events.filter(e => e.date >= todayStr).length === 0 && (
-              <div className="text-center text-gray-400 py-4">今後の予定はありません</div>
-            )}
+    <div className="bg-gray-50 min-h-screen pb-16">
+      {/* iOS風ヘッダー */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-b border-gray-200/50">
+        <div className="pt-12 pb-4 px-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">スケジュール</h1>
+              <p className="text-sm text-gray-500 mt-1">練習・試合の予定管理</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button 
+                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex-1 w-full max-w-xl mx-auto pt-2 px-2">
-        {/* カレンダー */}
-        <div className="bg-white rounded-xl shadow p-4 mb-4">
-          <div className="flex items-center justify-center mb-2">
-            <button onClick={() => {
-              if (calendarMonth === 0) {
-                setCalendarYear(calendarYear - 1);
-                setCalendarMonth(11);
-              } else {
-                setCalendarMonth(calendarMonth - 1);
-              }
-            }} className="text-2xl px-2">&lt;</button>
-            <span className="mx-4 font-bold text-lg">{calendarYear}年{calendarMonth + 1}月</span>
-            <button onClick={() => {
-              if (calendarMonth === 11) {
-                setCalendarYear(calendarYear + 1);
-                setCalendarMonth(0);
-              } else {
-                setCalendarMonth(calendarMonth + 1);
-              }
-            }} className="text-2xl px-2">&gt;</button>
+
+      <main className="pt-32 px-6 pb-16">
+        {/* iOS風カレンダー */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <button 
+              onClick={() => {
+                if (calendarMonth === 0) {
+                  setCalendarYear(calendarYear - 1);
+                  setCalendarMonth(11);
+                } else {
+                  setCalendarMonth(calendarMonth - 1);
+                }
+              }} 
+              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center active:bg-blue-100 transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <span className="text-xl font-bold text-gray-900">{calendarYear}年{calendarMonth + 1}月</span>
+            <button 
+              onClick={() => {
+                if (calendarMonth === 11) {
+                  setCalendarYear(calendarYear + 1);
+                  setCalendarMonth(0);
+                } else {
+                  setCalendarMonth(calendarMonth + 1);
+                }
+              }} 
+              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center active:bg-blue-100 transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold mb-1">
+          
+          <div className="grid grid-cols-7 gap-1 text-center text-sm font-semibold text-gray-500 mb-4">
             {['日','月','火','水','木','金','土'].map(d => <div key={d}>{d}</div>)}
           </div>
+          
           <div className="grid grid-cols-7 gap-1">
             {Array.from({ length: firstDayOfWeek }).map((_, i) => <div key={i}></div>)}
             {days.map((date: Date, i: number) => {
@@ -272,268 +273,506 @@ const SchedulePage: React.FC = () => {
               return (
                 <button
                   key={dateStr}
-                  className={`aspect-square w-8 rounded-full flex flex-col items-center justify-center text-xs font-bold border transition
-                    ${isSelected ? 'bg-blue-500 text-white border-blue-500' : isToday ? 'border-blue-400 text-blue-600' : 'bg-gray-100 border-transparent text-gray-700'}
+                  className={`aspect-square w-12 h-12 rounded-2xl flex flex-col items-center justify-center text-base font-bold transition-all duration-200
+                    ${isSelected 
+                      ? 'bg-blue-500 text-white shadow-lg scale-105' 
+                      : isToday 
+                        ? 'bg-blue-100 text-blue-600 border-2 border-blue-300' 
+                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                    }
                   `}
                   onClick={() => setSelectedDate(dateStr)}
                 >
                   {date.getDate()}
-                  {dotColor && <span className={`block w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : dotColor}`}></span>}
+                  {dotColor && (
+                    <span className={`block w-2 h-2 rounded-full mt-1 ${
+                      isSelected ? 'bg-white' : dotColor
+                    }`}></span>
+                  )}
                 </button>
               );
             })}
           </div>
+          
           {selectedDate && (
-            <button className="mt-2 text-xs text-blue-500 underline" onClick={() => setSelectedDate(null)}>
-              カレンダー選択を解除
+            <button 
+              className="mt-4 text-sm text-blue-600 font-semibold" 
+              onClick={() => setSelectedDate(null)}
+            >
+              選択を解除
             </button>
           )}
         </div>
-        {/* タブ */}
-        <div className="flex mb-4">
+
+        {/* iOS風タブ */}
+        <div className="flex bg-white rounded-2xl shadow-lg border border-gray-100 p-1 mb-6">
           {['今後の予定', '今日の予定'].map(t => (
             <button
               key={t}
-              className={`flex-1 py-2 rounded-lg font-bold border ${tab === t ? 'bg-white border-black text-black' : 'bg-gray-100 border-transparent text-gray-500'}`}
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
+                tab === t 
+                  ? 'bg-blue-500 text-white shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
               onClick={() => { setTab(t as any); setSelectedDate(null); }}
             >
               {t}
             </button>
           ))}
         </div>
-        {/* 予定リスト */}
-        {filteredEvents.length <= 3 ? (
-          <div className="space-y-4">
-            {filteredEvents.map((event, i) => (
-              <div key={i} className="bg-white rounded-xl shadow p-4 border relative">
-                <div className="flex items-center mb-2">
-                  <span className={`px-2 py-1 rounded text-xs font-bold mr-2 ${getTypeOption(event.type).color}`}>{event.type}</span>
-                  <span className="text-base font-bold mr-2 flex items-center">
-                    {event.title}
-                    <span className="inline-flex gap-2 ml-2 align-middle">
-                      <button className="text-xs text-blue-500 underline" onClick={() => handleEdit(i)}>編集</button>
-                      <button className="text-xs text-red-500 underline" onClick={() => handleDelete(i)}>削除</button>
+
+        {/* iOS風予定リスト */}
+        <div className="space-y-4">
+          {filteredEvents.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-gray-500 text-sm">予定はありません</p>
+            </div>
+          )}
+          
+          {filteredEvents.map((event, i) => (
+            <div key={i} className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+              <div className="flex items-start gap-4">
+                <div className={`w-12 h-12 flex items-center justify-center rounded-xl ${getTypeOption(event.type).iconBg} shadow-sm`}>
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {event.type === '試合' && (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    )}
+                    {event.type === '練習' && (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    )}
+                    {event.type === 'フットサル' && (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                    )}
+                  </svg>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getTypeOption(event.type).color}`}>
+                      {event.type}
                     </span>
+                    <span className="text-sm text-gray-500">
+                      {new Date(event.date).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}
+                    </span>
+                  </div>
+                  
+                  <h3 className="font-bold text-lg text-gray-900 mb-2">{event.title}</h3>
+                  
+                  <div className="space-y-2">
+                    {event.time && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{event.time}</span>
+                      </div>
+                    )}
+                    
+                    {event.place && (
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>{event.place}</span>
+                      </div>
+                    )}
+                    
+                    {event.note && (
+                      <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-700">
+                        {event.note}
+                      </div>
+                    )}
+                    
+                    {event.items && event.items.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs text-gray-500 font-semibold">持ち物</div>
+                        <div className="flex flex-wrap gap-2">
+                          {event.items.map((item: string, j: number) => (
+                            <span key={j} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <button 
+                    className="text-blue-600 font-semibold px-4 py-2 rounded-xl bg-blue-50 active:bg-blue-100 text-sm transition-colors" 
+                    onClick={() => handleEdit(i)}
+                  >
+                    編集
+                  </button>
+                  <button 
+                    className="text-red-600 font-semibold px-4 py-2 rounded-xl bg-red-50 active:bg-red-100 text-sm transition-colors" 
+                    onClick={() => handleDelete(i)}
+                  >
+                    削除
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      {/* iOS風サイドバー */}
+      <div
+        className={`fixed top-0 right-0 h-full w-80 bg-white border-l border-gray-200 shadow-2xl z-50 transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">予定一覧</h2>
+          <button
+            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-3">
+          {events
+            .filter(e => e.date >= todayStr)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((event, i) => (
+              <div key={i} className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${getTypeOption(event.type).color}`}>
+                    {event.type}
                   </span>
-                  <span className={`ml-auto w-8 h-8 flex items-center justify-center rounded-full ${getTypeOption(event.type).iconBg}`}>
-                    <i className={`${getTypeOption(event.type).icon} text-white`}></i>
+                  <span className="text-sm text-gray-500">
+                    {new Date(event.date).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}
                   </span>
                 </div>
-                <div className="text-sm text-gray-600 mb-1">{new Date(event.date || '').toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })} {event.time}</div>
-                {event.place && <div className="text-xs text-gray-500 mb-2"><i className="fas fa-map-marker-alt mr-1"></i>{event.place}</div>}
-                {event.note && <div className="bg-gray-50 rounded p-2 text-xs text-gray-700 mb-2">{event.note}</div>}
-                {event.items && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <span className="text-xs text-gray-500">持ち物:</span>
-                    {event.items.map((item: string, j: number) => (
-                      <span key={j} className="px-2 py-1 bg-gray-100 rounded text-xs font-bold border border-gray-200">{item}</span>
-                    ))}
-                  </div>
-                )}
+                <div className="font-semibold text-gray-900 mb-1">{event.title}</div>
+                <div className="flex gap-2">
+                  <button 
+                    className="text-xs text-blue-600 underline" 
+                    onClick={() => handleEdit(i)}
+                  >
+                    編集
+                  </button>
+                  <button 
+                    className="text-xs text-red-600 underline" 
+                    onClick={() => handleDelete(i)}
+                  >
+                    削除
+                  </button>
+                </div>
               </div>
             ))}
-          </div>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {filteredEvents.slice(0, 3).map((event, i) => (
-                <div key={i} className="bg-white rounded-xl shadow p-4 border relative">
-                  <div className="flex items-center mb-2">
-                    <span className={`px-2 py-1 rounded text-xs font-bold mr-2 ${getTypeOption(event.type).color}`}>{event.type}</span>
-                    <span className="text-base font-bold mr-2 flex items-center">
-                      {event.title}
-                      <span className="inline-flex gap-2 ml-2 align-middle">
-                        <button className="text-xs text-blue-500 underline" onClick={() => handleEdit(i)}>編集</button>
-                        <button className="text-xs text-red-500 underline" onClick={() => handleDelete(i)}>削除</button>
-                      </span>
-                    </span>
-                    <span className={`ml-auto w-8 h-8 flex items-center justify-center rounded-full ${getTypeOption(event.type).iconBg}`}>
-                      <i className={`${getTypeOption(event.type).icon} text-white`}></i>
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-1">{new Date(event.date || '').toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })} {event.time}</div>
-                  {event.place && <div className="text-xs text-gray-500 mb-2"><i className="fas fa-map-marker-alt mr-1"></i>{event.place}</div>}
-                  {event.note && <div className="bg-gray-50 rounded p-2 text-xs text-gray-700 mb-2">{event.note}</div>}
-                  {event.items && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="text-xs text-gray-500">持ち物:</span>
-                      {event.items.map((item: string, j: number) => (
-                        <span key={j} className="px-2 py-1 bg-gray-100 rounded text-xs font-bold border border-gray-200">{item}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+          {events.filter(e => e.date >= todayStr).length === 0 && (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p className="text-gray-500 text-sm">今後の予定はありません</p>
             </div>
-            <div className="space-y-4 mt-2 max-h-40 overflow-y-auto pr-1">
-              {filteredEvents.slice(3).map((event, i) => (
-                <div key={i} className="bg-white rounded-xl shadow p-4 border relative">
-                  <div className="flex items-center mb-2">
-                    <span className={`px-2 py-1 rounded text-xs font-bold mr-2 ${getTypeOption(event.type).color}`}>{event.type}</span>
-                    <span className="text-base font-bold mr-2 flex items-center">
-                      {event.title}
-                      <span className="inline-flex gap-2 ml-2 align-middle">
-                        <button className="text-xs text-blue-500 underline" onClick={() => handleEdit(i)}>編集</button>
-                        <button className="text-xs text-red-500 underline" onClick={() => handleDelete(i)}>削除</button>
-                      </span>
-                    </span>
-                    <span className={`ml-auto w-8 h-8 flex items-center justify-center rounded-full ${getTypeOption(event.type).iconBg}`}>
-                      <i className={`${getTypeOption(event.type).icon} text-white`}></i>
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-600 mb-1">{new Date(event.date || '').toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })} {event.time}</div>
-                  {event.place && <div className="text-xs text-gray-500 mb-2"><i className="fas fa-map-marker-alt mr-1"></i>{event.place}</div>}
-                  {event.note && <div className="bg-gray-50 rounded p-2 text-xs text-gray-700 mb-2">{event.note}</div>}
-                  {event.items && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="text-xs text-gray-500">持ち物:</span>
-                      {event.items.map((item: string, j: number) => (
-                        <span key={j} className="px-2 py-1 bg-gray-100 rounded text-xs font-bold border border-gray-200">{item}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
-      {/* プラスボタン */}
+
+      {/* iOS風FAB */}
       <button
-        className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-blue-600 text-white text-3xl shadow-lg flex items-center justify-center z-50 hover:bg-blue-700"
+        className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center z-50 hover:bg-blue-700 transition-colors"
         onClick={() => setAddModalOpen(true)}
         aria-label="予定を追加"
       >
-        <i className="fas fa-plus"></i>
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
       </button>
-      {/* 追加モーダル */}
+
+      {/* iOS風追加モーダル */}
       {addModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
               onClick={() => setAddModalOpen(false)}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-lg font-bold mb-4">スケジュールを追加</h2>
-            <form className="space-y-4" onSubmit={handleAddEvent}>
-              <div>
-                <label className="block text-sm font-medium mb-1">日付</label>
-                <input type="date" name="date" value={form.date} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              スケジュールを追加
+            </h2>
+            <form className="space-y-6" onSubmit={handleAddEvent}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                  <input 
+                    type="date" 
+                    name="date" 
+                    value={form.date} 
+                    onChange={handleFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">種別</label>
+                  <select 
+                    name="type" 
+                    value={form.type} 
+                    onChange={handleFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                  >
+                    {typeOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">種別</label>
-                <select name="type" value={form.type} onChange={handleFormChange} className="border rounded px-3 py-2 w-full">
-                  {typeOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-bold mb-2 text-gray-700">タイトル</label>
+                <input 
+                  type="text" 
+                  name="title" 
+                  value={form.title} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  required 
+                />
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">開始時刻</label>
+                  <input 
+                    type="time" 
+                    name="startTime" 
+                    value={form.startTime} 
+                    onChange={handleFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">終了時刻</label>
+                  <input 
+                    type="time" 
+                    name="endTime" 
+                    value={form.endTime} 
+                    onChange={handleFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  />
+                </div>
+              </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">タイトル</label>
-                <input type="text" name="title" value={form.title} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">場所</label>
+                <input 
+                  type="text" 
+                  name="place" 
+                  value={form.place} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">開始時刻</label>
-                <input type="time" name="startTime" value={form.startTime} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">メモ</label>
+                <textarea 
+                  name="note" 
+                  value={form.note} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  rows={3} 
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">終了時刻</label>
-                <input type="time" name="endTime" value={form.endTime} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">持ち物（カンマ区切り）</label>
+                <input 
+                  type="text" 
+                  name="items" 
+                  value={form.items} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  placeholder="例: 水筒, タオル" 
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">場所</label>
-                <input type="text" name="place" value={form.place} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">メモ</label>
-                <textarea name="note" value={form.note} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" rows={2} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">持ち物（カンマ区切り）</label>
-                <input type="text" name="items" value={form.items} onChange={handleFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 水筒, タオル" />
-              </div>
-              <div className="mb-2">
-                <button type="button" className="bg-green-500 text-white px-3 py-1 rounded text-sm" onClick={() => {
-                  if (!navigator.geolocation) {
-                    alert('位置情報取得に未対応のブラウザです');
-                    return;
-                  }
-                  navigator.geolocation.getCurrentPosition(
-                    pos => {
-                      const lat = pos.coords.latitude;
-                      const lng = pos.coords.longitude;
-                      const gmap = `https://www.google.com/maps?q=${lat},${lng}`;
-                      setForm({ ...form, place: gmap, latitude: lat, longitude: lng });
-                    },
-                    err => { alert('位置情報の取得に失敗しました'); }
-                  );
-                }}>
+              
+              <div className="bg-blue-50 rounded-2xl p-4">
+                <button 
+                  type="button" 
+                  className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold mb-2" 
+                  onClick={() => {
+                    if (!navigator.geolocation) {
+                      alert('位置情報取得に未対応のブラウザです');
+                      return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                      pos => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        const gmap = `https://www.google.com/maps?q=${lat},${lng}`;
+                        setForm({ ...form, place: gmap, latitude: lat, longitude: lng });
+                      },
+                      err => { alert('位置情報の取得に失敗しました'); }
+                    );
+                  }}
+                >
                   現在地リンクを取得
                 </button>
-                <span className="text-xs text-gray-500 ml-2">Googleマップで開けるリンクを自動入力</span>
+                <p className="text-xs text-gray-500">Googleマップで開けるリンクを自動入力</p>
               </div>
-              <div className="flex justify-end mt-4">
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2">登録</button>
-                <button type="button" className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400" onClick={() => setAddModalOpen(false)}>完了</button>
+              
+              <div className="flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  className="px-6 py-3 rounded-xl bg-gray-200 text-gray-700 font-semibold" 
+                  onClick={() => setAddModalOpen(false)}
+                >
+                  キャンセル
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 transition-colors"
+                >
+                  登録
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-      {/* 編集モーダル */}
+
+      {/* iOS風編集モーダル */}
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl"
               onClick={() => { setEditModalOpen(false); setEditIndex(null); }}
               aria-label="閉じる"
             >
               ×
             </button>
-            <h2 className="text-lg font-bold mb-4">スケジュールを編集</h2>
-            <form className="space-y-4" onSubmit={handleEditSave}>
-              <div>
-                <label className="block text-sm font-medium mb-1">日付</label>
-                <input type="date" name="date" value={editForm.date} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" required />
+            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              スケジュールを編集
+            </h2>
+            <form className="space-y-6" onSubmit={handleEditSave}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                  <input 
+                    type="date" 
+                    name="date" 
+                    value={editForm.date} 
+                    onChange={handleEditFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                    required 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">種別</label>
+                  <select 
+                    name="type" 
+                    value={editForm.type} 
+                    onChange={handleEditFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                  >
+                    {typeOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">種別</label>
-                <select name="type" value={editForm.type} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full">
-                  {typeOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-bold mb-2 text-gray-700">タイトル</label>
+                <input 
+                  type="text" 
+                  name="title" 
+                  value={editForm.title} 
+                  onChange={handleEditFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  required 
+                />
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">開始時刻</label>
+                  <input 
+                    type="time" 
+                    name="startTime" 
+                    value={editForm.startTime} 
+                    onChange={handleEditFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">終了時刻</label>
+                  <input 
+                    type="time" 
+                    name="endTime" 
+                    value={editForm.endTime} 
+                    onChange={handleEditFormChange} 
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  />
+                </div>
+              </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">タイトル</label>
-                <input type="text" name="title" value={editForm.title} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" required />
+                <label className="block text-xs font-bold mb-2 text-gray-700">場所</label>
+                <input 
+                  type="text" 
+                  name="place" 
+                  value={editForm.place} 
+                  onChange={handleEditFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">開始時刻</label>
-                <input type="time" name="startTime" value={editForm.startTime} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">メモ</label>
+                <textarea 
+                  name="note" 
+                  value={editForm.note} 
+                  onChange={handleEditFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  rows={3} 
+                />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium mb-1">終了時刻</label>
-                <input type="time" name="endTime" value={editForm.endTime} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" />
+                <label className="block text-xs font-bold mb-2 text-gray-700">持ち物（カンマ区切り）</label>
+                <input 
+                  type="text" 
+                  name="items" 
+                  value={editForm.items} 
+                  onChange={handleEditFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
+                  placeholder="例: 水筒, タオル" 
+                />
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">場所</label>
-                <input type="text" name="place" value={editForm.place} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">メモ</label>
-                <textarea name="note" value={editForm.note} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" rows={2} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">持ち物（カンマ区切り）</label>
-                <input type="text" name="items" value={editForm.items} onChange={handleEditFormChange} className="border rounded px-3 py-2 w-full" placeholder="例: 水筒, タオル" />
-              </div>
+              
               <div className="flex justify-end">
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button 
+                  type="submit" 
+                  className="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 transition-colors"
+                >
                   保存
                 </button>
               </div>
@@ -541,18 +780,38 @@ const SchedulePage: React.FC = () => {
           </div>
         </div>
       )}
-      {/* 削除確認ダイアログ */}
+
+      {/* iOS風削除確認ダイアログ */}
       {deleteIndex !== null && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
-            <h2 className="text-lg font-bold mb-4">この予定を削除しますか？</h2>
-            <div className="flex justify-end gap-4">
-              <button className="px-4 py-2 rounded bg-gray-200 text-gray-700" onClick={() => setDeleteIndex(null)}>キャンセル</button>
-              <button className="px-4 py-2 rounded bg-red-600 text-white" onClick={confirmDelete}>削除</button>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">この予定を削除しますか？</h2>
+              <p className="text-gray-500 text-sm mb-6">この操作は取り消せません</p>
+              <div className="flex gap-3">
+                <button 
+                  className="flex-1 px-4 py-3 rounded-xl bg-gray-200 text-gray-700 font-semibold" 
+                  onClick={() => setDeleteIndex(null)}
+                >
+                  キャンセル
+                </button>
+                <button 
+                  className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-semibold" 
+                  onClick={confirmDelete}
+                >
+                  削除
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
       <BottomTabBar />
     </div>
   );

@@ -16,7 +16,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ selectedPlayer, setSelectedPlayer, profile }) => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [noticeCount, setNoticeCount] = React.useState<number>(0);
 
@@ -36,61 +36,35 @@ const Header: React.FC<HeaderProps> = ({ selectedPlayer, setSelectedPlayer, prof
     return () => window.removeEventListener('noticeRead', fetchUnreadCount);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (error) {
-      console.error('ログアウトに失敗:', error);
-    }
-  };
-
   return (
-    <header className="relative w-full top-0 z-20 shadow-md">
-      {/* グラデーション背景＋斜めカット */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-700 pb-8 pt-6 px-0 relative">
-        <div className="max-w-4xl mx-auto px-4 flex flex-col gap-2">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="bg-white bg-opacity-20 rounded-full p-3 shadow-lg flex items-center justify-center">
-                <i className="fas fa-running text-3xl text-white drop-shadow"></i>
-              </div>
-              <h1 className="text-3xl font-extrabold tracking-tight drop-shadow">Sakakko</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <button className="relative cursor-pointer" onClick={() => navigate('/notifications')}>
-                <span className="bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+    <header className="relative w-full top-0 z-20 bg-white/90 backdrop-blur shadow-sm">
+      <div className="max-w-2xl mx-auto px-4 pt-6 pb-2 flex items-center justify-between">
+        <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Sakakko</h1>
+        <div className="flex items-center gap-3">
+          <button className="relative" onClick={() => navigate('/notifications')} aria-label="通知">
+            <span className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 shadow-sm">
                   <i className="fas fa-bell text-xl text-blue-600"></i>
                 </span>
+            {noticeCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center border-2 border-white font-bold">
-                  {noticeCount > 0 ? noticeCount : ''}
+                {noticeCount}
                 </span>
+            )}
               </button>
-              <span className="hidden sm:inline text-base font-medium text-white/80 drop-shadow">{user?.email}</span>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-base font-bold transition-colors shadow-lg"
-              >
-                ログアウト
-              </button>
+          {profile.image && (
+            <img src={profile.image} alt="profile" className="w-11 h-11 rounded-full border-2 border-blue-400 object-cover shadow cursor-pointer" onClick={() => navigate('/settings')} />
+          )}
             </div>
           </div>
           {/* ユーザーカード */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-6">
-            <div className="flex items-center gap-4 bg-white bg-opacity-90 rounded-2xl shadow-lg px-4 py-2">
+      <div className="max-w-2xl mx-auto px-4 mt-4 flex flex-col items-center">
+        <div className="bg-white rounded-2xl shadow-lg px-6 py-4 flex flex-col items-center w-full">
               {profile.image && (
-                <img src={profile.image} alt="profile" className="w-12 h-12 rounded-full border-2 border-blue-500 object-cover shadow" />
+            <img src={profile.image} alt="profile" className="w-20 h-20 rounded-full border-4 border-blue-200 object-cover shadow mb-2" />
               )}
-              <div className="text-left">
-                <h2 className="text-lg font-bold text-blue-800">{profile.name || '未登録'}</h2>
-                <p className="text-xs text-blue-600 opacity-90">{profile.age ? `${profile.age}歳` : ''}{profile.grade ? `・${profile.grade}` : ''}</p>
-              </div>
-            </div>
-          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">{profile.name || '未登録'}</h2>
+          <p className="text-sm text-gray-500 mb-1">{profile.age ? `${profile.age}歳` : ''}{profile.grade ? `・${profile.grade}` : ''}</p>
         </div>
-        {/* 波型SVGで下部を切り替え */}
-        <svg className="absolute bottom-0 left-0 w-full" height="32" viewBox="0 0 1440 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fill="#fff" fillOpacity="1" d="M0,32L1440,0L1440,32L0,32Z"></path>
-        </svg>
       </div>
     </header>
   );

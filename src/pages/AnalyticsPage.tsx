@@ -581,23 +581,27 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
         {/* --- AIコーチタブ --- */}
         {activeTab === "AIコーチ" && (
           <>
-            <div className="bg-white rounded-xl shadow p-6 mb-6">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><i className="fas fa-dumbbell text-blue-500"></i>AIコーチ体力アドバイス</h2>
-              <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* iOS風AIコーチフォーム */}
+            <div className="bg-white rounded-2xl shadow-2xl p-6 mb-8 border border-gray-100">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-700">
+                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+                AIコーチ体力アドバイス
+              </h2>
+              <form className="space-y-8" onSubmit={handleSubmit}>
                 {/* 基本情報 */}
-                <div className="bg-blue-50 rounded-lg p-4 mb-2">
+                <div className="bg-blue-50 rounded-xl p-4 mb-2">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
-                      <input type="date" name="date" value={form.date} onChange={handleChange} className="border rounded px-3 py-2 w-full" required />
+                      <input type="date" name="date" value={form.date} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
                     </div>
                     <div>
                       <label className="block text-xs font-bold mb-1 text-blue-700">年齢</label>
-                      <input type="number" name="age" value={form.age} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 10" />
+                      <input type="number" name="age" value={form.age} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required placeholder="例: 10" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold mb-1 text-blue-700">性別</label>
-                      <select name="gender" value={form.gender} onChange={handleChange} className="border rounded px-3 py-2 w-full" required>
+                      <select name="gender" value={form.gender} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required>
                         <option value="">選択</option>
                         <option value="boy">男子</option>
                         <option value="girl">女子</option>
@@ -607,58 +611,59 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
                   </div>
                 </div>
                 {/* 測定項目 */}
-                <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-running mr-1"></i>50m走 <span className='text-gray-400'>(秒)</span></label>
-                      <input type="number" step="0.01" name="run50m" value={form.run50m} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 9.2" />
+                      <label className="block text-xs font-bold mb-1 text-blue-700"><svg className="inline w-4 h-4 mr-1 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>50m走 <span className='text-gray-400'>(秒)</span></label>
+                      <input type="number" step="0.01" name="run50m" value={form.run50m} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required placeholder="例: 9.2" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-exchange-alt mr-1"></i>シャトルラン <span className='text-gray-400'>(回)</span></label>
-                      <input type="number" name="shuttle_run" value={form.shuttle_run} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 30" />
+                      <label className="block text-xs font-bold mb-1 text-green-700"><svg className="inline w-4 h-4 mr-1 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>シャトルラン <span className='text-gray-400'>(回)</span></label>
+                      <input type="number" name="shuttle_run" value={form.shuttle_run} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" required placeholder="例: 30" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-shoe-prints mr-1"></i>立ち幅跳び <span className='text-gray-400'>(cm)</span></label>
-                      <input type="number" name="jump" value={form.jump} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 150" />
+                      <label className="block text-xs font-bold mb-1 text-yellow-700"><svg className="inline w-4 h-4 mr-1 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>立ち幅跳び <span className='text-gray-400'>(cm)</span></label>
+                      <input type="number" name="jump" value={form.jump} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" required placeholder="例: 150" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-child mr-1"></i>上体起こし <span className='text-gray-400'>(回)</span><span className='text-xs text-gray-500 ml-1'>(30秒間で何回できるか)</span></label>
-                      <input type="number" name="sit_up" value={form.sit_up} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 20" />
+                      <label className="block text-xs font-bold mb-1 text-pink-700"><svg className="inline w-4 h-4 mr-1 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>上体起こし <span className='text-gray-400'>(回)</span><span className='text-xs text-gray-500 ml-1'>(30秒間で何回できるか)</span></label>
+                      <input type="number" name="sit_up" value={form.sit_up} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-pink-500 bg-white text-base" required placeholder="例: 20" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold mb-1 text-blue-700"><i className="fas fa-arrows-alt-v mr-1"></i>長座体前屈 <span className='text-gray-400'>(cm)</span></label>
-                      <input type="number" name="sit_and_reach" value={form.sit_and_reach} onChange={handleChange} className="border rounded px-3 py-2 w-full" required placeholder="例: 35" />
+                      <label className="block text-xs font-bold mb-1 text-purple-700"><svg className="inline w-4 h-4 mr-1 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>長座体前屈 <span className='text-gray-400'>(cm)</span></label>
+                      <input type="number" name="sit_and_reach" value={form.sit_and_reach} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 bg-white text-base" required placeholder="例: 35" />
                     </div>
                   </div>
                 </div>
                 <div className="flex justify-end mt-2">
-                  <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:bg-blue-700 font-bold text-base" disabled={loading}>
+                  <button type="submit" className="bg-blue-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-blue-700 font-bold text-base transition-all duration-150" disabled={loading}>
                     {loading ? '診断中...' : 'AIアドバイスを受ける'}
                   </button>
                 </div>
               </form>
-              {error && <div className="text-red-500 mt-2">{error}</div>}
-              {/* 診断履歴表示 */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <h2 className="text-base font-bold mb-2">診断履歴</h2>
-                {logs.length === 0 && <div className="text-gray-400 text-sm">履歴がありません</div>}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {error && <div className="text-red-500 mt-4 text-center font-bold">{error}</div>}
+            </div>
+            {/* iOS風診断履歴カード */}
+            <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
+              <h2 className="text-lg font-bold mb-4 text-blue-700">診断履歴</h2>
+              {logs.length === 0 && <div className="text-gray-400 text-sm text-center">履歴がありません</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {logs.map(log => {
                     const isOpen = adviceResult && ((adviceResult as any).id ? (adviceResult as any).id === log.id : (adviceResult as any).date === log.date && (adviceResult as any).created_at === log.created_at);
                     return (
-                      <div key={log.id} className={`bg-white rounded-lg shadow flex flex-col gap-1 p-4 relative group border hover:border-blue-400 transition cursor-pointer ${isOpen ? 'ring-2 ring-blue-400' : ''}`}
+                    <div key={log.id} className={`bg-white rounded-xl shadow-lg flex flex-col gap-2 p-5 relative group border-2 transition cursor-pointer ${isOpen ? 'border-blue-400 ring-2 ring-blue-200' : 'border-transparent'}`}
                         onClick={() => setAdviceResult(isOpen ? null : log)}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <i className="fas fa-notes-medical text-blue-500"></i>
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
                           <span className="text-xs text-gray-500">{log.date || log.created_at?.slice(0,10)}</span>
-                          <span className="ml-2 text-xs text-blue-500 flex items-center gap-1"><i className={`fas fa-chevron-${isOpen ? 'up' : 'down'}`}></i>{isOpen ? '閉じる' : 'クリックで詳細'}</span>
+                        <span className="ml-2 text-xs text-blue-500 flex items-center gap-1"><svg className={`w-4 h-4 ${isOpen ? 'rotate-180' : ''} transition-transform`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>{isOpen ? '閉じる' : '詳細'}</span>
                           <button
                             className="ml-auto text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
                             title="削除"
                             onClick={e => { e.stopPropagation(); if(window.confirm('この診断履歴を削除しますか？')) { deleteAdviceLog(log.id).then(()=>{ if(user?.id) getAdviceLogs(user.id).then(setLogs); }); } }}
                           >
-                            <i className="fas fa-trash"></i>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           </button>
                         </div>
                         <div className="text-sm font-bold">年齢: {log.age} / 性別: {log.gender}</div>
@@ -668,7 +673,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
                           <div className="mt-3 border-t pt-3 animate-fade-in">
                             {log.scores && (
                               <>
-                                <div className="mb-2 font-bold">スコア</div>
+                              <div className="mb-2 font-bold text-blue-700">スコア</div>
                                 <ul className="text-sm grid grid-cols-2 gap-2">
                                   {(Object.entries(log.scores) as [string, any][]).map(([k, v]) => (
                                     <li key={k}>{k}: <span className="font-bold">{v}</span></li>
@@ -676,8 +681,8 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
                                 </ul>
                               </>
                             )}
-                            <div className="mb-2 font-bold mt-2">AIコーチのアドバイス</div>
-                            <div className="bg-blue-50 rounded p-3 text-sm mb-2" style={{ whiteSpace: 'pre-line' }}>
+                          <div className="mb-2 font-bold mt-2 text-blue-700">AIコーチのアドバイス</div>
+                          <div className="bg-blue-50 rounded-xl p-3 text-sm mb-2" style={{ whiteSpace: 'pre-line' }}>
                               {log.advice}
                             </div>
                           </div>
@@ -687,59 +692,62 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
                   })}
                 </div>
               </div>
-            </div>
-            <div className="bg-white rounded-xl shadow p-6 mb-6">
-              <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><i className="fas fa-dumbbell text-blue-500"></i>5種目別カスタム練習メニュー</h2>
+            {/* --- カスタム練習メニュー --- */}
+            <div className="bg-white rounded-2xl shadow-2xl p-6 mb-8 border border-gray-100">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-700">
+                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h3" /></svg>
+                5種目別カスタム練習メニュー
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
-                  <i className="fas fa-running text-2xl text-blue-400 mt-1"></i>
+                <div className="bg-blue-50 rounded-xl p-5 flex gap-4 items-start shadow-sm border border-blue-100">
+                  <svg className="w-8 h-8 text-blue-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
                   <div>
-                    <div className="font-bold text-blue-700 mb-1">50m走</div>
-                    <ul className="list-disc pl-5 text-sm text-blue-900">
+                    <div className="font-bold text-blue-700 mb-1 text-lg">50m走</div>
+                    <ul className="list-disc pl-5 text-base text-blue-900 space-y-1">
                       <li>ダッシュ練習</li>
                       <li>ミニハードル走</li>
                       <li>フォーム改善</li>
                     </ul>
                   </div>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
-                  <i className="fas fa-exchange-alt text-2xl text-green-400 mt-1"></i>
+                <div className="bg-green-50 rounded-xl p-5 flex gap-4 items-start shadow-sm border border-green-100">
+                  <svg className="w-8 h-8 text-green-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
                   <div>
-                    <div className="font-bold text-green-700 mb-1">シャトルラン</div>
-                    <ul className="list-disc pl-5 text-sm text-green-900">
+                    <div className="font-bold text-green-700 mb-1 text-lg">シャトルラン</div>
+                    <ul className="list-disc pl-5 text-base text-green-900 space-y-1">
                       <li>持久走</li>
                       <li>インターバルトレーニング</li>
                       <li>リズム走</li>
                     </ul>
                   </div>
                 </div>
-                <div className="bg-yellow-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
-                  <i className="fas fa-shoe-prints text-2xl text-yellow-400 mt-1"></i>
+                <div className="bg-yellow-50 rounded-xl p-5 flex gap-4 items-start shadow-sm border border-yellow-100">
+                  <svg className="w-8 h-8 text-yellow-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
                   <div>
-                    <div className="font-bold text-yellow-700 mb-1">立ち幅跳び</div>
-                    <ul className="list-disc pl-5 text-sm text-yellow-900">
+                    <div className="font-bold text-yellow-700 mb-1 text-lg">立ち幅跳び</div>
+                    <ul className="list-disc pl-5 text-base text-yellow-900 space-y-1">
                       <li>ジャンプドリル</li>
                       <li>スクワット</li>
                       <li>体幹トレーニング</li>
                     </ul>
                   </div>
                 </div>
-                <div className="bg-pink-50 rounded-lg p-4 flex gap-3 items-start shadow-sm">
-                  <i className="fas fa-child text-2xl text-pink-400 mt-1"></i>
+                <div className="bg-pink-50 rounded-xl p-5 flex gap-4 items-start shadow-sm border border-pink-100">
+                  <svg className="w-8 h-8 text-pink-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
                   <div>
-                    <div className="font-bold text-pink-700 mb-1">上体起こし</div>
-                    <ul className="list-disc pl-5 text-sm text-pink-900">
+                    <div className="font-bold text-pink-700 mb-1 text-lg">上体起こし</div>
+                    <ul className="list-disc pl-5 text-base text-pink-900 space-y-1">
                       <li>腹筋運動</li>
                       <li>体幹プランク</li>
                       <li>メディシンボール投げ</li>
                     </ul>
                   </div>
                 </div>
-                <div className="bg-purple-50 rounded-lg p-4 flex gap-3 items-start shadow-sm sm:col-span-2">
-                  <i className="fas fa-arrows-alt-v text-2xl text-purple-400 mt-1"></i>
+                <div className="bg-purple-50 rounded-xl p-5 flex gap-4 items-start shadow-sm border border-purple-100 sm:col-span-2">
+                  <svg className="w-8 h-8 text-purple-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
                   <div>
-                    <div className="font-bold text-purple-700 mb-1">長座体前屈</div>
-                    <ul className="list-disc pl-5 text-sm text-purple-900">
+                    <div className="font-bold text-purple-700 mb-1 text-lg">長座体前屈</div>
+                    <ul className="list-disc pl-5 text-base text-purple-900 space-y-1">
                       <li>ストレッチ</li>
                       <li>ヨガ</li>
                       <li>柔軟体操</li>
@@ -748,10 +756,14 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-xl shadow p-6 mb-6">
-              <h2 className="text-lg font-bold mb-4">成長予想グラフ（3ヶ月）</h2>
-              {growthLoading && <div>予測中...</div>}
-              {growthError && <div className="text-red-500">{growthError}</div>}
+            {/* --- 成長予想グラフ --- */}
+            <div className="bg-white rounded-2xl shadow-2xl p-6 mb-8 border border-gray-100">
+              <h2 className="text-xl font-bold mb-6 flex items-center gap-2 text-blue-700">
+                <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M9 20H4v-2a3 3 0 015.356-1.857M15 10V5a3 3 0 00-6 0v5m6 0a3 3 0 01-6 0m6 0v1a3 3 0 01-6 0v-1" /></svg>
+                成長予想グラフ（3ヶ月）
+              </h2>
+              {growthLoading && <div className="text-blue-500 text-center">予測中...</div>}
+              {growthError && <div className="text-red-500 text-center">{growthError}</div>}
               <div ref={growthChartRef} style={{ width: '100%', height: 300 }} />
             </div>
           </>
