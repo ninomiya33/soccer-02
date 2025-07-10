@@ -74,15 +74,19 @@ const SettingsPage: React.FC = () => {
     });
   };
 
-  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleEditFormChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (e.target instanceof HTMLInputElement && e.target.name === 'imageFile' && e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = ev => {
-        setEditImagePreview(ev.target?.result as string);
-        setEditForm({ ...editForm, avatar_url: ev.target?.result as string });
-      };
-      reader.readAsDataURL(file);
+      // Supabase Storageにアップロード
+      if (user) {
+        try {
+          const url = await profileService.uploadAvatarFile(file, user.id);
+          setEditImagePreview(url);
+          setEditForm({ ...editForm, avatar_url: url });
+        } catch (err) {
+          alert('画像のアップロードに失敗しました');
+        }
+      }
     } else {
       if (e.target.name === 'age') {
         setEditForm({ ...editForm, age: e.target.value ? Number(e.target.value) : undefined });

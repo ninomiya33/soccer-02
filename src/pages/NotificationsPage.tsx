@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../config/supabase.js';
 import { useAuth } from '../contexts/AuthContext.js';
 import BottomTabBar from '../components/BottomTabBar.js';
+import CustomCalendar from '../components/CustomCalendar';
 
 interface Notice {
   id: string;
@@ -20,6 +21,7 @@ const NotificationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showNoticeDatePicker, setShowNoticeDatePicker] = useState(false);
 
   // お知らせ一覧を取得
   const fetchNotices = async () => {
@@ -86,14 +88,32 @@ const NotificationsPage: React.FC = () => {
         <div className="mb-2">
           <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
           <input
-            type="date"
+            type="text"
             name="notice_date"
             value={form.notice_date}
-            onChange={e => setForm({ ...form, notice_date: e.target.value })}
-            className="border rounded px-3 py-2 w-full"
+            onFocus={() => setShowNoticeDatePicker(true)}
+            readOnly
+            className="border rounded px-3 py-2 w-full cursor-pointer"
             required
             disabled={submitting}
+            placeholder="YYYY-MM-DD"
           />
+          {showNoticeDatePicker && (
+            <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+              <CustomCalendar
+                year={new Date().getFullYear()}
+                month={new Date().getMonth()}
+                selectedDate={form.notice_date}
+                onDateSelect={date => {
+                  setForm({ ...form, notice_date: date });
+                  setShowNoticeDatePicker(false);
+                }}
+                onYearChange={() => {}}
+                onMonthChange={() => {}}
+              />
+              <button type="button" className="mt-2 text-blue-600" onClick={() => setShowNoticeDatePicker(false)}>閉じる</button>
+            </div>
+          )}
         </div>
         <input
           type="text"

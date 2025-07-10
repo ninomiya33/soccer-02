@@ -21,6 +21,7 @@ const Placeholder: React.FC<{ title: string }> = ({ title }) => (
 // ProtectedRouteの定義と利用を削除し、全ページをそのまま表示するように修正
 // <Route path="/login" ... /> も削除
 const AppRoutes: React.FC = () => {
+  const { user, loading } = useAuth();
   // ダッシュボードと同じログデータをここで管理
   const [physicalLogs, setPhysicalLogs] = useState<{
     date: string;
@@ -54,46 +55,43 @@ const AppRoutes: React.FC = () => {
     note: string;
     status: 'win' | 'draw' | 'lose';
   }[]>([]);
-  const [practiceLogs, setPracticeLogs] = useState<{
-    id: number;
-    date: string;
-    duration: string;
-    title: string;
-    description: string;
-  }[]>([
+  const [practiceLogs, setPracticeLogs] = useState([
     {
       id: Date.now() + Math.random(),
       date: '2025-06-23',
       duration: '2時間',
-      title: 'パス＆シュート練習',
-      description: 'コーナーキックの精度向上に取り組みました。'
+      title: '全体練習',
+      description: '全体でパスやシュートの基礎練習を行いました。'
     },
     {
       id: Date.now() + Math.random(),
       date: '2025-06-19',
       duration: '1.5時間',
-      title: 'ミニゲーム',
-      description: '3対3の小さな試合で状況判断力を鍛えました。'
+      title: 'ドリブル教室',
+      description: 'ドリブル技術の向上に集中しました。'
     },
     {
       id: Date.now() + Math.random(),
       date: '2025-06-18',
       duration: '2時間',
-      title: 'フィジカルトレーニング',
-      description: 'スプリントとアジリティトレーニングを実施。'
+      title: 'シュート練習',
+      description: '様々な角度からのシュート練習を実施。'
     },
     {
       id: Date.now() + Math.random(),
       date: '2025-06-16',
       duration: '1時間',
-      title: '個人技術練習',
-      description: 'ドリブル技術の向上に集中しました。'
+      title: 'パス練習',
+      description: '正確なパスを意識して練習しました。'
     }
   ]);
 
+  if (loading) return <div>Loading...</div>;
+
   return (
     <Routes>
-      <Route path="/" element={
+      {/* 個人データ系ページはログイン必須 */}
+      <Route path="/" element={user ? (
           <DashboardPage
             physicalLogs={physicalLogs}
             setPhysicalLogs={setPhysicalLogs}
@@ -104,31 +102,23 @@ const AppRoutes: React.FC = () => {
             practiceLogs={practiceLogs}
             setPracticeLogs={setPracticeLogs}
           />
-      } />
+      ) : <LoginPage />} />
 
-      <Route path="/players/:id" element={
-          <PlayerDetailPage />
-      } />
-      <Route path="/analytics" element={
+      <Route path="/players/:id" element={user ? <PlayerDetailPage /> : <LoginPage />} />
+      <Route path="/analytics" element={user ? (
           <AnalyticsPage
             physicalLogs={physicalLogs}
             skillLogs={skillLogs}
             matchLogs={matchLogs}
             practiceLogs={practiceLogs}
           />
-      } />
-      <Route path="/schedule" element={
-          <SchedulePage />
-      } />
-      <Route path="/videos" element={
-          <VideosPage />
-      } />
-      <Route path="/settings" element={
-          <SettingsPage />
-      } />
-      <Route path="/notifications" element={
-          <NotificationsPage />
-      } />
+      ) : <LoginPage />} />
+      {/* 共通ページは誰でもOK */}
+      <Route path="/schedule" element={<SchedulePage />} />
+      <Route path="/videos" element={<VideosPage />} />
+      {/* 個人データ系ページはログイン必須 */}
+      <Route path="/settings" element={user ? <SettingsPage /> : <LoginPage />} />
+      <Route path="/notifications" element={user ? <NotificationsPage /> : <LoginPage />} />
     </Routes>
   );
 };

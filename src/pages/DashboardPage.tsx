@@ -8,8 +8,6 @@ import { practiceLogService } from '../services/practiceLogService.js';
 import { matchLogService } from '../services/matchLogService.js';
 
 // 各コンポーネントをインポート
-import Header from '../components/Header.js';
-import PlayerInfoCard from '../components/PlayerInfoCard.js';
 import DashboardCard from '../components/DashboardCard.js';
 import GoalProgress from '../components/GoalProgressCard.js';
 import Badges from '../components/AchievementBadges.js';
@@ -204,11 +202,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
 
   // 種類ごとの色マッピング
   const typeColorMap: Record<string, string> = {
-    'パス練習': 'bg-blue-500 text-white border-blue-500',
+    '全体練習': 'bg-blue-500 text-white border-blue-500',
+    'ドリブル教室': 'bg-green-500 text-white border-green-500',
     'シュート練習': 'bg-red-500 text-white border-red-500',
-    'ミニゲーム': 'bg-green-500 text-white border-green-500',
-    'フィジカルトレーニング': 'bg-orange-500 text-white border-orange-500',
-    '個人技術練習': 'bg-purple-500 text-white border-purple-500',
+    'パス練習': 'bg-yellow-500 text-white border-yellow-500',
   };
 
   // カレンダーの日付セルに色付きバッジを表示
@@ -664,6 +661,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
     }
   };
 
+  // カレンダー表示制御用のstateを追加
+  const [showPracticeDatePicker, setShowPracticeDatePicker] = useState(false);
+  const [showPhysicalDatePicker, setShowPhysicalDatePicker] = useState(false);
+  const [showSkillDatePicker, setShowSkillDatePicker] = useState(false);
+  const [showMatchDatePicker, setShowMatchDatePicker] = useState(false);
+
   return (
     <div className="bg-gray-50 min-h-screen pb-16">
       {/* iOS風ヘッダー */}
@@ -675,14 +678,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               <p className="text-sm text-gray-500 mt-1">今日の練習記録</p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
-                </svg>
-              </button>
-              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">田中</span>
-              </div>
+              {profile.image ? (
+                <img
+                  src={profile.image}
+                  alt="プロフィール画像"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-blue-400 shadow"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{profile.name ? profile.name.slice(0, 2) : '名'}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1153,18 +1159,42 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <form className="space-y-6" onSubmit={handlePracticeSubmit}>
                   <div>
                 <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
-                <input type="date" name="date" value={form.date} onChange={handleFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
+                <input
+                  type="text"
+                  name="date"
+                  value={form.date}
+                  onFocus={() => setShowPracticeDatePicker(true)}
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base cursor-pointer"
+                  required
+                  placeholder="YYYY-MM-DD"
+                />
+                {showPracticeDatePicker && (
+                  <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                    <CustomCalendar
+                      year={calendarYear}
+                      month={calendarMonth}
+                      selectedDate={form.date}
+                      onDateSelect={date => {
+                        setForm({ ...form, date });
+                        setShowPracticeDatePicker(false);
+                      }}
+                      onYearChange={setCalendarYear}
+                      onMonthChange={setCalendarMonth}
+                    />
+                    <button type="button" className="mt-2 text-blue-600" onClick={() => setShowPracticeDatePicker(false)}>閉じる</button>
+                  </div>
+                )}
                   </div>
               <div className="grid grid-cols-2 gap-4">
                   <div>
                   <label className="block text-xs font-bold mb-2 text-gray-700">種類</label>
                   <select name="title" value={form.title} onChange={handleFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base">
-                      <option>パス練習</option>
+                      <option>全体練習</option>
+                      <option>ドリブル教室</option>
                       <option>シュート練習</option>
-                      <option>ミニゲーム</option>
-                      <option>フィジカルトレーニング</option>
-                      <option>個人技術練習</option>
-                    </select>
+                      <option>パス練習</option>
+                  </select>
                   </div>
                   <div>
                   <label className="block text-xs font-bold mb-2 text-gray-700">時間 (分)</label>
@@ -1205,7 +1235,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <form className="space-y-6" onSubmit={handlePhysicalSubmit}>
                   <div>
                 <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
-                <input type="date" name="date" value={physicalForm.date} onChange={handlePhysicalFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base" required />
+                <input
+                  type="text"
+                  name="date"
+                  value={physicalForm.date}
+                  onFocus={() => setShowPhysicalDatePicker(true)}
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 bg-white text-base cursor-pointer"
+                  required
+                  placeholder="YYYY-MM-DD"
+                />
+                {showPhysicalDatePicker && (
+                  <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                    <CustomCalendar
+                      year={calendarYear}
+                      month={calendarMonth}
+                      selectedDate={physicalForm.date}
+                      onDateSelect={date => {
+                        setPhysicalForm({ ...physicalForm, date });
+                        setShowPhysicalDatePicker(false);
+                      }}
+                      onYearChange={setCalendarYear}
+                      onMonthChange={setCalendarMonth}
+                    />
+                    <button type="button" className="mt-2 text-green-600" onClick={() => setShowPhysicalDatePicker(false)}>閉じる</button>
+                  </div>
+                )}
                   </div>
               <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1291,7 +1346,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <form className="space-y-6" onSubmit={handleSkillSubmit}>
               <div>
                 <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
-                <input type="date" name="date" value={skillForm.date} onChange={handleSkillFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base" required />
+                <input
+                  type="text"
+                  name="date"
+                  value={skillForm.date}
+                  onFocus={() => setShowSkillDatePicker(true)}
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-yellow-500 bg-white text-base cursor-pointer"
+                  required
+                  placeholder="YYYY-MM-DD"
+                />
+                {showSkillDatePicker && (
+                  <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                    <CustomCalendar
+                      year={calendarYear}
+                      month={calendarMonth}
+                      selectedDate={skillForm.date}
+                      onDateSelect={date => {
+                        setSkillForm({ ...skillForm, date });
+                        setShowSkillDatePicker(false);
+                      }}
+                      onYearChange={setCalendarYear}
+                      onMonthChange={setCalendarMonth}
+                    />
+                    <button type="button" className="mt-2 text-yellow-600" onClick={() => setShowSkillDatePicker(false)}>閉じる</button>
+                  </div>
+                )}
               </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1353,7 +1433,32 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <form className="space-y-6" onSubmit={handleMatchSubmit}>
                   <div>
                 <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
-                <input type="date" name="date" value={matchForm.date} onChange={handleMatchFormChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base" required />
+                <input
+                  type="text"
+                  name="date"
+                  value={matchForm.date}
+                  onFocus={() => setShowMatchDatePicker(true)}
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-amber-500 bg-white text-base cursor-pointer"
+                  required
+                  placeholder="YYYY-MM-DD"
+                />
+                {showMatchDatePicker && (
+                  <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                    <CustomCalendar
+                      year={calendarYear}
+                      month={calendarMonth}
+                      selectedDate={matchForm.date}
+                      onDateSelect={date => {
+                        setMatchForm({ ...matchForm, date });
+                        setShowMatchDatePicker(false);
+                      }}
+                      onYearChange={setCalendarYear}
+                      onMonthChange={setCalendarMonth}
+                    />
+                    <button type="button" className="mt-2 text-amber-600" onClick={() => setShowMatchDatePicker(false)}>閉じる</button>
+                  </div>
+                )}
                   </div>
               <div className="grid grid-cols-2 gap-4">
                   <div>

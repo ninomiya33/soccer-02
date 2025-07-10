@@ -1,12 +1,10 @@
 import React, { useState } from "react";
 
 const MENU_CATEGORIES = [
-  { category: "ドリブル", menus: ["8の字", "ジグザグ", "鬼ごっこ"] },
-  { category: "パス", menus: ["壁パス", "2人組", "動きながら"] },
-  { category: "シュート", menus: ["左右シュート", "動きながら", "1対1"] },
-  { category: "ミニゲーム", menus: ["2対2", "3対3", "1対1"] },
-  { category: "体力", menus: ["ダッシュ", "サーキット", "リフティング"] },
-  { category: "その他", menus: ["ストレッチ", "コーチ指導", "動画確認"] },
+  { category: "全体練習", menus: ["全体練習"] },
+  { category: "ドリブル教室", menus: ["ドリブル教室"] },
+  { category: "シュート練習", menus: ["シュート練習"] },
+  { category: "パス練習", menus: ["パス練習"] },
 ];
 
 const SATISFACTION_EMOJIS = ["😄", "😐", "😞"];

@@ -71,8 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async () => {
     if (!Capacitor.isNativePlatform()) {
-      // Webの場合は何もしない or エラーを返す
-      return { error: { message: 'ネイティブアプリでのみGoogleログインが利用可能です' } };
+      // Webの場合はSupabaseのOAuthを使う
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      return { error };
     }
     try {
       // ネイティブGoogleログイン
@@ -81,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // SupabaseにIDトークンでサインイン
       const { data, error } = await supabase.auth.signInWithIdToken({
-      provider: 'google',
+        provider: 'google',
         token: idToken,
       });
 

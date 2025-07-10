@@ -29,5 +29,12 @@ export const profileService = {
       .single();
     if (error) return null;
     return data;
+  },
+  async uploadAvatarFile(file: File, userId: string): Promise<string> {
+    const filePath = `avatars/${userId}_${Date.now()}_${file.name}`;
+    const { data, error } = await supabase.storage.from('avatars').upload(filePath, file);
+    if (error) throw new Error(error.message);
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    return urlData.publicUrl;
   }
 }; 

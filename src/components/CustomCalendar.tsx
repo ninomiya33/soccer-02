@@ -30,9 +30,14 @@ export default function CustomCalendar({
   onMonthChange?: (month: number) => void;
 }) {
   const days = getMonthDays(year, month);
+  const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0:日, 1:月, ...
+  const calendarCells = [
+    ...Array.from({ length: firstDayOfWeek }, () => null),
+    ...days
+  ];
   const rows = [];
-  for (let i = 0; i < days.length; i += 7) {
-    rows.push(days.slice(i, i + 7));
+  for (let i = 0; i < calendarCells.length; i += 7) {
+    rows.push(calendarCells.slice(i, i + 7));
   }
 
   // 日付をYYYY-MM-DD形式で返す
@@ -56,7 +61,8 @@ export default function CustomCalendar({
       </div>
       {rows.map((row, i) => (
         <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', height: 36 }}>
-          {row.map((d) => {
+          {row.map((d, idx) => {
+            if (d === null) return <div key={idx + 'empty'} />;
             const dateStr = getDateStr(d);
             const isSelected = selectedDate === dateStr;
             return (
@@ -76,8 +82,6 @@ export default function CustomCalendar({
               </div>
             );
           })}
-          {/* 7日未満の行は空セルで埋める */}
-          {row.length < 7 && Array.from({ length: 7 - row.length }).map((_, idx) => <div key={idx + 'empty'} />)}
         </div>
       ))}
     </div>

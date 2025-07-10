@@ -6,9 +6,10 @@ export interface Schedule {
   type: string;
   title: string;
   date: string;
-  time: string;
-  place: string;
-  note?: string;
+  start_time: string | null;
+  end_time: string | null;
+  location: string;
+  description?: string;
   items?: string[];
   latitude: number | null;
   longitude: number | null;

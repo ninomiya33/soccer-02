@@ -11,6 +11,7 @@ import { playerService } from '../services/playerService.js';
 import { fetchAdvice } from '../services/aiAdviceService.js';
 import { saveAdviceLog, getAdviceLogs, deleteAdviceLog } from '../services/adviceLogService.js';
 import { fetchGrowthPrediction } from '../services/growthService.js';
+import CustomCalendar from '../components/CustomCalendar.js';
 
 interface AnalyticsPageProps {
   physicalLogs: {
@@ -138,6 +139,7 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
   const [growthPrediction, setGrowthPrediction] = useState<any>(null);
   const [growthLoading, setGrowthLoading] = useState(false);
   const [growthError, setGrowthError] = useState<string | null>(null);
+  const [showAdviceDatePicker, setShowAdviceDatePicker] = useState(false);
 
   useEffect(() => {
     if (profile?.name) setSelectedPlayer(profile.name);
@@ -593,7 +595,32 @@ const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ physicalLogs, skillLogs, 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold mb-1 text-blue-700">日付</label>
-                      <input type="date" name="date" value={form.date} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" required />
+                      <input
+                        type="text"
+                        name="date"
+                        value={form.date}
+                        onFocus={() => setShowAdviceDatePicker(true)}
+                        readOnly
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base cursor-pointer"
+                        required
+                        placeholder="YYYY-MM-DD"
+                      />
+                      {showAdviceDatePicker && (
+                        <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                          <CustomCalendar
+                            year={new Date().getFullYear()}
+                            month={new Date().getMonth()}
+                            selectedDate={form.date}
+                            onDateSelect={(date: string) => {
+                              setForm({ ...form, date });
+                              setShowAdviceDatePicker(false);
+                            }}
+                            onYearChange={() => {}}
+                            onMonthChange={() => {}}
+                          />
+                          <button type="button" className="mt-2 text-blue-600" onClick={() => setShowAdviceDatePicker(false)}>閉じる</button>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-xs font-bold mb-1 text-blue-700">年齢</label>

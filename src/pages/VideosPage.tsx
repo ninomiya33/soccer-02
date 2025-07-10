@@ -490,6 +490,27 @@ const VideosPage: React.FC = () => {
             </div>
 
             <form className="space-y-6" onSubmit={handleAddVideo}>
+              {/* アップロード方法切り替え */}
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">アップロード方法</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={`flex-1 px-4 py-2 rounded-xl font-semibold text-sm border-2 ${form.uploadType === 'file' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-200'}`}
+                    onClick={() => setForm(f => ({ ...f, uploadType: 'file' }))}
+                  >
+                    ファイル/カメラ
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 px-4 py-2 rounded-xl font-semibold text-sm border-2 ${form.uploadType === 'link' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-700 border-gray-200'}`}
+                    onClick={() => setForm(f => ({ ...f, uploadType: 'link', file: null }))}
+                  >
+                    URLを入力
+                  </button>
+                </div>
+              </div>
+
               {/* タイトル入力 */}
               <div>
                 <label className="block text-xs font-bold mb-2 text-gray-700">タイトル</label>
@@ -519,80 +540,95 @@ const VideosPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* 動画ファイル選択 */}
-              <div>
-                <label className="block text-xs font-bold mb-2 text-gray-700">動画ファイル</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  name="file"
-                  accept="video/*"
-                  onChange={handleFormChange}
-                  className="hidden"
-                />
-                <div className="space-y-3">
-                  <button 
-                    type="button" 
-                    className="w-full bg-blue-500 text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3 shadow-lg hover:bg-blue-600 transition-colors" 
-                    onClick={handleCameraVideo}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    カメラで撮影
-                  </button>
-                  <button 
-                    type="button" 
-                    className="w-full bg-green-500 text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3 shadow-lg hover:bg-green-600 transition-colors" 
-                    onClick={handlePickVideo}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    動画を選択
-                  </button>
-                </div>
-                
-                {/* 選択されたファイルのプレビュー */}
-                {form.file && (
-                  <div className="bg-gray-50 rounded-xl p-4 space-y-3 mt-4">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              {/* ファイル/カメラ or URL入力欄 */}
+              {form.uploadType === 'file' && (
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">動画ファイル</label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    name="file"
+                    accept="video/*"
+                    onChange={handleFormChange}
+                    className="hidden"
+                  />
+                  <div className="space-y-3">
+                    <button 
+                      type="button" 
+                      className="w-full bg-blue-500 text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3 shadow-lg hover:bg-blue-600 transition-colors" 
+                      onClick={handleCameraVideo}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <span className="text-sm font-semibold text-gray-700">{form.file.name}</span>
-                    </div>
-                    {videoPreviewUrl && (
-                      <video 
-                        src={videoPreviewUrl} 
-                        controls 
-                        className="w-full rounded-xl shadow-sm border" 
-                        style={{ maxHeight: '200px' }}
-                      />
-                    )}
-              </div>
-                )}
-                
-                {uploadError && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {uploadError}
-              </div>
-                )}
-                
-                {uploading && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-blue-600 text-sm flex items-center gap-2">
-                    <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    アップロード中...
+                      カメラで撮影
+                    </button>
+                    <button 
+                      type="button" 
+                      className="w-full bg-green-500 text-white px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3 shadow-lg hover:bg-green-600 transition-colors" 
+                      onClick={handlePickVideo}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      動画を選択
+                    </button>
                   </div>
-                )}
-              </div>
+                  {/* 選択されたファイルのプレビュー */}
+                  {form.file && (
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3 mt-4">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-sm font-semibold text-gray-700">{form.file.name}</span>
+                      </div>
+                      {videoPreviewUrl && (
+                        <video 
+                          src={videoPreviewUrl} 
+                          controls 
+                          className="w-full rounded-xl shadow-sm border" 
+                          style={{ maxHeight: '200px' }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {form.uploadType === 'link' && (
+                <div>
+                  <label className="block text-xs font-bold mb-2 text-gray-700">動画URL</label>
+                  <input
+                    type="text"
+                    name="videoUrl"
+                    value={form.videoUrl}
+                    onChange={handleFormChange}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                    placeholder="YouTubeなどの動画URLを入力"
+                    required
+                  />
+                </div>
+              )}
+
+              {uploadError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {uploadError}
+                </div>
+              )}
+
+              {uploading && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-blue-600 text-sm flex items-center gap-2">
+                  <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  アップロード中...
+                </div>
+              )}
 
               {/* 登録ボタン */}
               <button 
@@ -601,7 +637,7 @@ const VideosPage: React.FC = () => {
                 disabled={uploading}
               >
                 {uploading ? 'アップロード中...' : '登録'}
-                </button>
+              </button>
             </form>
           </div>
         </div>

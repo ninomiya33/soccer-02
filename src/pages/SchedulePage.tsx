@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext.js';
 import { scheduleService, Schedule } from '../services/scheduleService.js';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import PracticeLogForm from '../components/PracticeLogForm.js';
+import CustomCalendar from '../components/CustomCalendar.js';
 
 const typeOptions = [
   { value: '試合', label: '試合', color: 'bg-red-100 text-red-600', dot: 'bg-red-500', icon: 'fas fa-futbol', iconBg: 'bg-red-500' },
@@ -36,6 +37,9 @@ interface ScheduleForm {
   longitude: number | null;
 }
 
+// 時刻をHH:mm形式で表示する関数を追加
+const formatTime = (t: string | null | undefined) => t ? t.slice(0,5) : '--:--';
+
 const SchedulePage: React.FC = () => {
   const { user } = useAuth();
   const [tab, setTab] = useState<'今後の予定' | '今日の予定'>('今後の予定');
@@ -61,6 +65,7 @@ const SchedulePage: React.FC = () => {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
@@ -86,28 +91,32 @@ const SchedulePage: React.FC = () => {
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+  // addSchedule時もitems: string[]で送信
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.type || !form.title || !user) return;
-    const timeStr = form.startTime && form.endTime ? `${form.startTime}〜${form.endTime}` : '';
-    const newEvent: Omit<Schedule, 'id' | 'created_at'> = {
+    const newEvent = {
       user_id: user.id,
       type: form.type,
       title: form.title,
       date: form.date,
-      time: timeStr,
-      place: form.place,
-      note: form.note,
+      start_time: form.startTime || null,
+      end_time: form.endTime || null,
+      location: form.place || '',
+      description: form.note || '',
       items: form.items ? form.items.split(',').map(s => s.trim()).filter(Boolean) : [],
-      latitude: form.latitude,
-      longitude: form.longitude,
+      latitude: form.latitude || null,
+      longitude: form.longitude || null,
     };
     try {
       const saved = await scheduleService.addSchedule(newEvent);
       setEvents([saved, ...events]);
       setAddModalOpen(false);
       setForm({ type: '練習', title: '', date: '', startTime: '', endTime: '', time: '', place: '', note: '', items: '', latitude: null, longitude: null });
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('登録に失敗しました: ' + (err?.message || err));
+      console.error(err);
+    }
   };
 
   // 編集用フォーム
@@ -130,9 +139,9 @@ const SchedulePage: React.FC = () => {
       type: e.type,
       title: e.title,
       date: e.date,
-      time: e.time,
-      place: e.place,
-      note: e.note ?? '',
+      time: e.start_time || '',
+      place: e.location,
+      note: e.description ?? '',
       items: Array.isArray(e.items) ? e.items.join(', ') : '',
       startTime: '',
       endTime: '',
@@ -148,14 +157,17 @@ const SchedulePage: React.FC = () => {
     if (!eventToEdit.id) return;
     const realIdx = events.findIndex(ev => ev.id === eventToEdit.id);
     if (realIdx === -1) return;
-    const updates: Partial<Schedule> = {
+    const updates = {
       type: editForm.type,
       title: editForm.title,
       date: editForm.date,
-      time: editForm.time,
-      place: editForm.place,
-      note: editForm.note,
+      start_time: editForm.startTime || null,
+      end_time: editForm.endTime || null,
+      location: editForm.place || '',
+      description: editForm.note || '',
       items: editForm.items ? editForm.items.split(',').map(s => s.trim()).filter(Boolean) : [],
+      latitude: eventToEdit.latitude ?? null,
+      longitude: eventToEdit.longitude ?? null,
     };
     try {
       const updated = await scheduleService.updateSchedule(eventToEdit.id!, updates);
@@ -164,7 +176,10 @@ const SchedulePage: React.FC = () => {
       setEvents(newEvents);
       setEditModalOpen(false);
       setEditIndex(null);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      alert('保存に失敗しました: ' + (err?.message || err));
+      console.error(err);
+    }
   };
   // 編集フォーム変更
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -352,55 +367,61 @@ const SchedulePage: React.FC = () => {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getTypeOption(event.type).color}`}>
-                      {event.type}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {new Date(event.date).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}
-                    </span>
-                  </div>
-                  
-                  <h3 className="font-bold text-lg text-gray-900 mb-2">{event.title}</h3>
-                  
+                  {/* 予定カード内 */}
                   <div className="space-y-2">
-                    {event.time && (
+                    {/* 日付・種別 */}
+                    <div className="flex items-center gap-3 text-sm text-gray-500">
+                      <span>{new Date(event.date).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${getTypeOption(event.type).color}`}>{event.type}</span>
+                    </div>
+                    {/* タイトル */}
+                    <div className="font-bold text-lg text-gray-900">{event.title}</div>
+                    {/* 開始・終了時刻 */}
+                    {(event.start_time || event.end_time) && (
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span>{event.time}</span>
+                        <span>{formatTime(event.start_time)}〜{formatTime(event.end_time)}</span>
                       </div>
                     )}
-                    
-                    {event.place && (
+                    {/* 場所 */}
+                    {event.location && (
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span>{event.place}</span>
+                        <span>{event.location}</span>
                       </div>
                     )}
-                    
-                    {event.note && (
+                    {/* メモ */}
+                    {event.description && (
                       <div className="bg-gray-50 rounded-xl p-3 text-sm text-gray-700">
-                        {event.note}
+                        {event.description}
                       </div>
                     )}
-                    
-                    {event.items && event.items.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs text-gray-500 font-semibold">持ち物</div>
-                        <div className="flex flex-wrap gap-2">
-                          {event.items.map((item: string, j: number) => (
-                            <span key={j} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                              {item}
-                            </span>
-                          ))}
+                    {/* 持ち物 */}
+                    {(() => {
+                      let items: string[] = [];
+                      if (Array.isArray(event.items)) {
+                        items = event.items;
+                      } else if (typeof event.items === 'string' && event.items && (event.items as string).trim() !== '') {
+                        items = (event.items as string).split(',').map((s: string) => s.trim()).filter(Boolean);
+                      }
+                      return items.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-xs text-gray-500 font-semibold">持ち物</div>
+                          <div className="flex flex-wrap gap-2">
+                            {items.map((item, j) => (
+                              <span key={j} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                {item}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
                 
@@ -513,31 +534,49 @@ const SchedulePage: React.FC = () => {
               スケジュールを追加
             </h2>
             <form className="space-y-6" onSubmit={handleAddEvent}>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
-                  <input 
-                    type="date" 
-                    name="date" 
-                    value={form.date} 
-                    onChange={handleFormChange} 
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
-                    required 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-gray-700">種別</label>
-                  <select 
-                    name="type" 
-                    value={form.type} 
-                    onChange={handleFormChange} 
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
-                  >
-                    {typeOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* 日付 */}
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input
+                  type="text"
+                  name="date"
+                  value={form.date}
+                  onFocus={() => setShowDatePicker(true)}
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base cursor-pointer"
+                  required
+                  placeholder="YYYY-MM-DD"
+                />
+                {showDatePicker && (
+                  <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                    <CustomCalendar
+                      year={calendarYear}
+                      month={calendarMonth}
+                      selectedDate={form.date}
+                      onDateSelect={date => {
+                        setForm({ ...form, date });
+                        setShowDatePicker(false);
+                      }}
+                      onYearChange={setCalendarYear}
+                      onMonthChange={setCalendarMonth}
+                    />
+                    <button type="button" className="mt-2 text-blue-600" onClick={() => setShowDatePicker(false)}>閉じる</button>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">種別</label>
+                <select 
+                  name="type" 
+                  value={form.type} 
+                  onChange={handleFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                >
+                  {typeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
               
               <div>
@@ -672,31 +711,49 @@ const SchedulePage: React.FC = () => {
               スケジュールを編集
             </h2>
             <form className="space-y-6" onSubmit={handleEditSave}>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
-                  <input 
-                    type="date" 
-                    name="date" 
-                    value={editForm.date} 
-                    onChange={handleEditFormChange} 
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base" 
-                    required 
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold mb-2 text-gray-700">種別</label>
-                  <select 
-                    name="type" 
-                    value={editForm.type} 
-                    onChange={handleEditFormChange} 
-                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
-                  >
-                    {typeOptions.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
+              {/* 日付 */}
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">日付</label>
+                <input
+                  type="text"
+                  name="date"
+                  value={editForm.date}
+                  onFocus={() => setShowDatePicker(true)}
+                  readOnly
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base cursor-pointer"
+                  required
+                  placeholder="YYYY-MM-DD"
+                />
+                {showDatePicker && (
+                  <div className="absolute z-50 bg-white rounded-xl shadow-xl mt-2">
+                    <CustomCalendar
+                      year={calendarYear}
+                      month={calendarMonth}
+                      selectedDate={editForm.date}
+                      onDateSelect={date => {
+                        setEditForm({ ...editForm, date });
+                        setShowDatePicker(false);
+                      }}
+                      onYearChange={setCalendarYear}
+                      onMonthChange={setCalendarMonth}
+                    />
+                    <button type="button" className="mt-2 text-blue-600" onClick={() => setShowDatePicker(false)}>閉じる</button>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold mb-2 text-gray-700">種別</label>
+                <select 
+                  name="type" 
+                  value={editForm.type} 
+                  onChange={handleEditFormChange} 
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 bg-white text-base"
+                >
+                  {typeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
               
               <div>
